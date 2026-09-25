@@ -1,4 +1,4 @@
-# PERSON A — Data, Preprocessing & Model Training Engineer
+  # PERSON A — Data, Preprocessing & Model Training Engineer
 ### (Owns: dataset, EDA, preprocessing.py, features.py, train.py, evaluate.py — all 3 model tiers)
 
 # SYSTEM / AGENT PROMPT — Build "Fake News Detection" (Final Year Project)

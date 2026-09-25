@@ -11,6 +11,7 @@ __pycache__/
 data/raw/*.csv
 data/processed/*.csv
 data/processed/*.parquet
+data/*.db
 
 # Model Artifacts (too large for GitHub)
 models/*.joblib
