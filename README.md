@@ -8,4 +8,5 @@ data science pipeline: data collection from publicly available labeled datasets,
 preprocessing and cleaning, feature extraction using techniques such as TF-IDF and
 word embeddings, model training using a range of algorithms from basic (Naive
 Bayes, Logistic Regression) to advanced (LSTM, BERT), and model evaluation using
-standard classification metrics. 
+standard classification metrics.
+by Mohit. Shubham, Karan
