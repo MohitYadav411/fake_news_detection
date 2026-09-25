@@ -1,0 +1,24 @@
+# Virtual Environments
+venv/
+env/
+.env
+
+# Python Cache
+__pycache__/
+*.pyc
+
+# Data
+data/raw/*.csv
+data/processed/*.csv
+data/processed/*.parquet
+
+# Model Artifacts (too large for GitHub)
+models/*.joblib
+models/*.pt
+models/*.h5
+models/bert/
+results/
+logs/
+
+# Optional: Jupyter Notebook checkpoints
+.ipynb_checkpoints/
