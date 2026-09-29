@@ -14,11 +14,29 @@ def main():
     print("Loading raw data...")
     fake_df = pd.read_csv('data/raw/Fake.csv')
     true_df = pd.read_csv('data/raw/True.csv')
+
+    for name, frame in (("Fake.csv", fake_df), ("True.csv", true_df)):
+        if not {"title", "text"}.issubset(frame.columns):
+            raise ValueError(f"{name} must contain title and text columns")
+        content = (frame['title'].fillna('') + ' ' + frame['text'].fillna('')).str.strip()
+        unique_ratio = content.nunique() / max(len(content), 1)
+        if len(content) >= 100 and unique_ratio < 0.5:
+            raise ValueError(
+                f"{name} has only {unique_ratio:.1%} unique articles. "
+                "Training stopped because this looks like repetitive synthetic/demo data. "
+                "Put a varied, labeled dataset in data/raw before retraining."
+            )
     
     fake_df['label'] = 1  # 1 for Fake
     true_df['label'] = 0  # 0 for Real
     
     df = pd.concat([fake_df, true_df], ignore_index=True)
+    
+    # Remove duplicates to prevent train/test leakage
+    print("Dropping duplicates...")
+    initial_len = len(df)
+    df = df.drop_duplicates(subset=['title', 'text'])
+    print(f"Dropped {initial_len - len(df)} duplicates.")
     
     # 70/30 stratified split (as per Phase 3 docs)
     print("Splitting into train and test sets (70/30 stratified)...")

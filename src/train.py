@@ -23,15 +23,15 @@ def train_model(model_name: str, X_train, y_train) -> object:
     """
     # Initialize model based on name
     if model_name == "naive_bayes":
-        model = MultinomialNB(alpha=0.1)
+        model = MultinomialNB(alpha=0.01) # Lower alpha for sharper bounds
     elif model_name == "logistic_regression":
-        model = LogisticRegression(C=10, max_iter=1000, class_weight='balanced')
+        model = LogisticRegression(C=20, max_iter=2000, class_weight='balanced')
     elif model_name == "decision_tree":
-        model = DecisionTreeClassifier(max_depth=20, min_samples_split=5)
+        model = DecisionTreeClassifier(max_depth=50, min_samples_split=4, class_weight='balanced', random_state=42)
     elif model_name == "random_forest":
-        model = RandomForestClassifier(n_estimators=100, max_depth=None, n_jobs=-1)
+        model = RandomForestClassifier(n_estimators=300, max_depth=None, n_jobs=-1, class_weight='balanced', random_state=42)
     elif model_name == "svm":
-        model = LinearSVC(C=1.0)
+        model = LinearSVC(C=2.0, max_iter=2000)
     else:
         raise ValueError(f"Unknown model name: {model_name}")
         

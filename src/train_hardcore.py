@@ -14,11 +14,12 @@ from sklearn.metrics import accuracy_score, precision_recall_fscore_support
 # Ensure src can be imported
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from src.evaluate import compute_metrics, plot_confusion_matrix
+from src.preprocessing import preprocess
 
 # Determine device (we know it's CPU, but good practice)
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-def load_and_downsample_data(sample_fraction=0.02):
+def load_and_downsample_data(sample_fraction=0.25):
     """
     Loads raw data, merges title+text, and aggressively downsamples it.
     Returns stratified train and test dataframes.
@@ -29,11 +30,12 @@ def load_and_downsample_data(sample_fraction=0.02):
     fake_df['label'] = 1
     true_df['label'] = 0
     df = pd.concat([fake_df, true_df], ignore_index=True)
-    
+
     # Stratified downsample
     _, df_sample = train_test_split(df, test_size=sample_fraction, random_state=42, stratify=df['label'])
     
-    df_sample['text'] = df_sample['title'].fillna('') + " " + df_sample['text'].fillna('')
+    df_sample['text'] = (df_sample['title'].fillna('') + " " + df_sample['text'].fillna('')).map(preprocess)
+    df_sample = df_sample[df_sample['text'] != 'insufficient content to analyze']
     df_sample = df_sample[['text', 'label']]
     
     # Train/test split on the sample
@@ -80,7 +82,7 @@ class LSTMClassifier(nn.Module):
         # Take the last hidden state
         out = self.dropout(hidden[-1])
         out = self.fc(out)
-        return self.sigmoid(out).squeeze()
+        return self.sigmoid(out).squeeze(-1)
 
 def train_lstm(train_df, test_df):
     print("--- Training LSTM ---")
@@ -116,6 +118,9 @@ def train_lstm(train_df, test_df):
     
     # Save model
     torch.save(model.state_dict(), 'models/lstm.pt')
+    
+    with open('models/lstm_vocab.json', 'w') as f:
+        json.dump(vocab, f)
     
     # Eval
     model.eval()
@@ -165,9 +170,9 @@ def compute_hf_metrics(pred):
         'recall': recall
     }
 
-def train_bert(train_df, test_df):
-    print("--- Training BERT ---")
-    tokenizer = AutoTokenizer.from_pretrained('bert-base-uncased')
+def train_hf_model(train_df, test_df, model_name, hf_pretrained_name):
+    print(f"--- Training {model_name.upper()} ---")
+    tokenizer = AutoTokenizer.from_pretrained(hf_pretrained_name)
     
     train_encodings = tokenizer(train_df['text'].tolist(), truncation=True, padding=True, max_length=128)
     test_encodings = tokenizer(test_df['text'].tolist(), truncation=True, padding=True, max_length=128)
@@ -175,10 +180,10 @@ def train_bert(train_df, test_df):
     train_dataset = HFDataset(train_encodings, train_df['label'].tolist())
     test_dataset = HFDataset(test_encodings, test_df['label'].tolist())
     
-    model = AutoModelForSequenceClassification.from_pretrained('bert-base-uncased', num_labels=2).to(device)
+    model = AutoModelForSequenceClassification.from_pretrained(hf_pretrained_name, num_labels=2).to(device)
     
     training_args = TrainingArguments(
-        output_dir='./results',
+        output_dir=f'./results_{model_name}',
         num_train_epochs=1,
         per_device_train_batch_size=8,
         per_device_eval_batch_size=8,
@@ -197,11 +202,11 @@ def train_bert(train_df, test_df):
     
     start_time = time.time()
     trainer.train()
-    print(f"BERT Training completed in {time.time() - start_time:.2f} seconds.")
+    print(f"{model_name.upper()} Training completed in {time.time() - start_time:.2f} seconds.")
     
     # Save model
-    model.save_pretrained('models/bert')
-    tokenizer.save_pretrained('models/bert')
+    model.save_pretrained(f'models/{model_name}')
+    tokenizer.save_pretrained(f'models/{model_name}')
     
     # Eval
     eval_result = trainer.evaluate()
@@ -213,20 +218,24 @@ def train_bert(train_df, test_df):
         'f1': eval_result['eval_f1']
     }
     
-    with open('models/bert_metrics.json', 'w') as f:
+    with open(f'models/{model_name}_metrics.json', 'w') as f:
         json.dump(metrics, f, indent=4)
         
     # Get raw predictions for confusion matrix
     raw_preds = trainer.predict(test_dataset)
     preds = raw_preds.predictions.argmax(-1)
     fig = plot_confusion_matrix(test_df['label'].tolist(), preds)
-    fig.savefig('models/bert_confusion_matrix.png')
+    fig.savefig(f'models/{model_name}_confusion_matrix.png')
     
-    print(f"BERT Results: {metrics}")
+    print(f"{model_name.upper()} Results: {metrics}")
 
 if __name__ == "__main__":
     # We use 2% of the total dataset (~900 items) to ensure CPU training finishes quickly
-    train_df, test_df = load_and_downsample_data(sample_fraction=0.02)
+    train_df, test_df = load_and_downsample_data(sample_fraction=0.2)
     train_lstm(train_df, test_df)
-    train_bert(train_df, test_df)
+    train_hf_model(train_df, test_df, 'bert', 'bert-base-uncased')
+    train_hf_model(train_df, test_df, 'distilbert', 'distilbert-base-uncased')
+    train_hf_model(train_df, test_df, 'roberta', 'roberta-base')
+    train_hf_model(train_df, test_df, 'albert', 'albert-base-v2')
+    train_hf_model(train_df, test_df, 'electra', 'google/electra-small-discriminator')
     print("Hardcore tier successfully completed.")

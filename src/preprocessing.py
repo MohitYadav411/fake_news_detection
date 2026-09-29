@@ -33,6 +33,11 @@ def clean_text(raw_text: str) -> str:
     # Remove HTML tags
     text = re.sub(r'<[^>]+>', ' ', text)
     
+    # Strip Reuters data leakage tags (e.g., "washington (reuters) - ")
+    # Use a more targeted regex so we don't delete the entire title
+    text = re.sub(r'\(reuters\)\s*-\s*', ' ', text)
+    text = text.replace('reuters', ' ')
+    
     # Remove URLs
     text = re.sub(r'http\S+|www\.\S+', '', text)
     

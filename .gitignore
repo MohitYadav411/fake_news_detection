@@ -9,6 +9,7 @@ __pycache__/
 
 # Data
 data/raw/*.csv
+data/synthetic/
 data/processed/*.csv
 data/processed/*.parquet
 data/*.db
