@@ -38,3 +38,4 @@ Welcome to the Fake News Detection project. As an agent assisting with this repo
   - Deep-learning models (e.g., LSTM and BERT) via `src/train_hardcore.py` when dependencies and compute are available.
 - **Partial Training:** If any model cannot be trained (due to missing dependencies or compute), explain exactly why and what remains. **Never say all models were trained if only some were.**
 - **Prediction History:** Initialize and preserve the database and prediction history correctly as implemented in the project.
+

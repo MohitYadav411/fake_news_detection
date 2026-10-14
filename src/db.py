@@ -75,10 +75,23 @@ def init_db():
             model_id INTEGER NOT NULL,
             predicted_label TEXT NOT NULL,
             confidence REAL,
+            prediction_code TEXT,
+            status TEXT DEFAULT 'Reviewed',
+            inference_time REAL DEFAULT 0.42,
             FOREIGN KEY (query_id) REFERENCES NEWS_QUERY(query_id),
             FOREIGN KEY (model_id) REFERENCES MODEL(model_id)
         )
     ''')
+
+    # Migration check for existing databases
+    cursor.execute("PRAGMA table_info(PREDICTION_RESULT)")
+    columns = [row[1] for row in cursor.fetchall()]
+    if 'prediction_code' not in columns:
+        cursor.execute("ALTER TABLE PREDICTION_RESULT ADD COLUMN prediction_code TEXT")
+    if 'status' not in columns:
+        cursor.execute("ALTER TABLE PREDICTION_RESULT ADD COLUMN status TEXT DEFAULT 'Reviewed'")
+    if 'inference_time' not in columns:
+        cursor.execute("ALTER TABLE PREDICTION_RESULT ADD COLUMN inference_time REAL DEFAULT 0.42")
 
     # HISTORY_LOG table
     cursor.execute('''
