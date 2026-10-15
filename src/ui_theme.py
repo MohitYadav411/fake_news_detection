@@ -161,6 +161,48 @@ header[data-testid="stHeader"] {
     border: 1px solid rgba(245, 158, 11, 0.3);
 }
 
+.badge-active {
+    background-color: rgba(16, 185, 129, 0.15);
+    color: #34D399;
+    border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.badge-inactive {
+    background-color: rgba(100, 116, 139, 0.15);
+    color: #94A3B8;
+    border: 1px solid rgba(100, 116, 139, 0.3);
+}
+
+.badge-source {
+    background-color: rgba(37, 99, 235, 0.15);
+    color: #60A5FA;
+    border: 1px solid rgba(37, 99, 235, 0.3);
+}
+
+.badge-success {
+    background-color: rgba(16, 185, 129, 0.15);
+    color: #34D399;
+    border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.badge-warning {
+    background-color: rgba(245, 158, 11, 0.15);
+    color: #FBBF24;
+    border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.badge-error {
+    background-color: rgba(239, 68, 68, 0.15);
+    color: #F87171;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.badge-info {
+    background-color: rgba(14, 165, 233, 0.15);
+    color: #38BDF8;
+    border: 1px solid rgba(14, 165, 233, 0.3);
+}
+
 /* Top App Header & Pill */
 .fna-top-header {
     display: flex;
@@ -281,3 +323,34 @@ def render_badge(label, badge_type="real"):
     """Returns HTML for a rounded status pill badge."""
     css_class = f"badge-{badge_type.lower()}"
     return f"<span class='fna-badge {css_class}'>{label}</span>"
+
+def render_stat_card(title: str, value: str, subtext: str = "", icon: str = "", color: str = "#3B82F6"):
+    """Renders a styled stat card with icon on dark background matching Screenshot 1."""
+    html = f"""
+    <div style="background-color: #0F172A; border: 1px solid #1E293B; border-radius: 12px; padding: 1.1rem; display: flex; align-items: center; gap: 14px; height: 100%;">
+        <div style="background-color: rgba(255, 255, 255, 0.05); border: 1px solid #1E293B; border-radius: 10px; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; font-size: 1.35rem; color: {color}; flex-shrink: 0;">
+            {icon}
+        </div>
+        <div>
+            <div style="font-size: 0.78rem; color: #94A3B8; font-weight: 500;">{title}</div>
+            <div style="font-size: 1.35rem; font-weight: 700; color: #F8FAFC; line-height: 1.25;">{value}</div>
+            <div style="font-size: 0.72rem; color: #64748B; margin-top: 2px;">{subtext}</div>
+        </div>
+    </div>
+    """
+    st.markdown(html, unsafe_allow_html=True)
+
+def render_confidence_pill(confidence: float, label: str):
+    """Renders a numeric confidence with colored mini progress bar."""
+    color = "#10B981" if str(label).lower() == "real" else ("#EF4444" if str(label).lower() == "fake" else "#F59E0B")
+    pct = min(max(float(confidence), 0.0), 100.0)
+    html = f"""
+    <div style="display: flex; align-items: center; gap: 8px;">
+        <span style="font-size: 0.82rem; font-weight: 600; color: #CBD5E1; min-width: 42px;">{confidence}%</span>
+        <div style="background-color: #1E293B; border-radius: 999px; height: 6px; width: 50px; overflow: hidden;">
+            <div style="background-color: {color}; height: 100%; width: {pct}%;"></div>
+        </div>
+    </div>
+    """
+    return html
+

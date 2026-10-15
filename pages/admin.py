@@ -20,6 +20,14 @@ sys.path.append(os.path.join(BASE_DIR, "src"))
 from db import init_db, get_connection
 from history import get_kpis, get_history, update_review_status, export_history, get_dataset_stats
 from ui_theme import inject_theme, render_kpi, render_badge
+from views import (
+    render_model_insights_page,
+    render_prediction_history_page,
+    render_model_comparison_page,
+    render_dataset_manager_page,
+    render_model_training_page,
+    render_system_logs_page
+)
 
 init_db()
 
@@ -118,12 +126,25 @@ def main():
             unsafe_allow_html=True
         )
         
-        st.markdown("<p style='font-size: 0.8rem; font-weight: 600; color: #64748B; text-transform: uppercase;'>Admin Navigation</p>", unsafe_allow_html=True)
+        admin_nav_options = [
+            "Overview (Dashboard)",
+            "Prediction History",
+            "Dataset Manager",
+            "Model Training",
+            "Model Insights",
+            "System Logs"
+        ]
+        if "admin_nav_sel" not in st.session_state:
+            st.session_state.admin_nav_sel = "Overview (Dashboard)"
+            
+        def_admin_idx = admin_nav_options.index(st.session_state.admin_nav_sel) if st.session_state.admin_nav_sel in admin_nav_options else 0
         admin_page = st.radio(
             "Admin Section",
-            ["Overview (Dashboard)", "Prediction History"],
+            admin_nav_options,
+            index=def_admin_idx,
             label_visibility="collapsed"
         )
+        st.session_state.admin_nav_sel = admin_page
         
         st.markdown("<hr style='border-color: #1E293B; margin: 30px 0 20px 0;'>", unsafe_allow_html=True)
         if hasattr(st, "page_link"):
@@ -426,186 +447,51 @@ def main():
                         st.code(proc.stderr or proc.stdout)
             st.markdown('</div>', unsafe_allow_html=True)
 
-    # PAGE 2: Prediction History & Details Inspector (Screenshot 3)
-    elif admin_page == "Prediction History":
+    elif "Prediction History" in admin_page:
         render_admin_header()
+        render_prediction_history_page(is_admin=True)
 
-        # Top 4 KPI Cards
-        top4 = st.columns(4)
-        with top4[0]:
-            render_kpi("Total Predictions", f"{display_total:,}", "Live query records", "#3B82F6", "📄")
-        with top4[1]:
-            render_kpi("Real News", f"{display_real:,}", f"{real_pct}% of total", "#10B981", "✅")
-        with top4[2]:
-            render_kpi("Fake News", f"{display_fake:,}", f"{fake_pct}% of total", "#EF4444", "❌")
-        with top4[3]:
-            render_kpi("Unverified", f"{display_unverified:,}", f"{unv_pct}% of total", "#F59E0B", "❓")
+    elif "Model Comparison" in admin_page:
+        render_admin_header()
+        render_model_comparison_page()
 
-        st.markdown("<div style='height: 15px;'></div>", unsafe_allow_html=True)
+    elif "Dataset Manager" in admin_page:
+        render_admin_header()
+        render_dataset_manager_page(is_admin=True)
 
-        col_hist_table, col_hist_detail = st.columns([1.6, 1])
+    elif "Model Training" in admin_page:
+        render_admin_header()
+        render_model_training_page(is_admin=True)
 
-        hist_df = get_history(limit=50)
+    elif "Model Insights" in admin_page:
+        render_admin_header()
+        render_model_insights_page(is_admin=True)
 
-        with col_hist_table:
-            st.markdown(
-                """
-                <div class="fna-card">
-                    <div class="fna-card-header">
-                        <div class="fna-card-title">📑 Prediction History</div>
-                    </div>
-                """,
-                unsafe_allow_html=True
-            )
+    elif "System Logs" in admin_page:
+        render_admin_header()
+        render_system_logs_page()
 
-            # Modern Filter Bar
-            col_search, col_f_model, col_f_status = st.columns([2, 1.2, 1.2])
-            with col_search:
-                search_term = st.text_input("Search", placeholder="🔍 Search news content or ID...", label_visibility="collapsed")
-            with col_f_model:
-                f_model = st.selectbox("Model Filter", ["All Models"] + [m.replace('_', ' ').title() for m in EVAL_MODELS], label_visibility="collapsed")
-            with col_f_status:
-                f_status = st.selectbox("Status Filter", ["All Statuses", "Verified", "Reviewed", "Pending"], label_visibility="collapsed")
-
-            # Apply Filters
-            filtered_df = hist_df.copy()
-            if not filtered_df.empty:
-                if search_term:
-                    filtered_df = filtered_df[
-                        filtered_df['raw_text'].str.contains(search_term, case=False, na=False) |
-                        filtered_df['prediction_code'].str.contains(search_term, case=False, na=False)
-                    ]
-                if f_model != "All Models":
-                    filtered_df = filtered_df[filtered_df['model_name'].str.lower() == f_model.lower().replace(' ', '_')]
-                if f_status != "All Statuses":
-                    filtered_df = filtered_df[filtered_df['status'].str.lower() == f_status.lower()]
-
-            selected_row = None
-            if not filtered_df.empty:
-                # Add a dropdown or native table selection for details
-                col_sel_lbl, col_sel_box = st.columns([1, 2.5])
-                with col_sel_lbl:
-                    st.markdown("<p style='font-size: 0.85rem; color: #94A3B8; margin-top: 6px; font-weight: 500;'>Select to inspect:</p>", unsafe_allow_html=True)
-                with col_sel_box:
-                    options_map = {
-                        f"{row['prediction_code']} | {str(row['raw_text'])[:38]}...": row['prediction_code']
-                        for _, row in filtered_df.iterrows()
-                    }
-                    selected_key = st.selectbox(
-                        "Inspect record",
-                        options=list(options_map.keys()),
-                        index=0,
-                        label_visibility="collapsed"
-                    )
-                    selected_code = options_map[selected_key]
-                    selected_row = filtered_df[filtered_df['prediction_code'] == selected_code].iloc[0]
-
-                # Clean structured table display
-                table_display = filtered_df[["prediction_code", "raw_text", "predicted_label", "confidence", "model_name", "status"]].copy()
-                table_display.columns = ["Prediction ID", "News Text (Preview)", "Verdict", "Confidence (%)", "Model", "Status"]
-                st.dataframe(
-                    table_display,
-                    use_container_width=True,
-                    hide_index=True,
-                    height=380
-                )
-                st.caption(f"Showing {len(filtered_df)} records matching filter.")
-            else:
-                st.info("No records matched the filter criteria.")
-
-            st.markdown('</div>', unsafe_allow_html=True)
-
-        with col_hist_detail:
-            st.markdown(
-                """
-                <div class="fna-card">
-                    <div class="fna-card-header">
-                        <div class="fna-card-title">👁️ Prediction Details</div>
-                    </div>
-                """,
-                unsafe_allow_html=True
-            )
-
-            if selected_row is not None:
-                p_code = selected_row["prediction_code"]
-                p_label = str(selected_row["predicted_label"])
-                p_conf = round(float(selected_row["confidence"]), 2)
-                p_model = str(selected_row["model_name"]).replace('_', ' ').title()
-                p_text = selected_row["raw_text"]
-                p_time = selected_row["logged_at"]
-                p_res_id = selected_row["result_id"]
-                p_status = selected_row.get("status", "Reviewed")
-
-                st.markdown(
-                    f"""
-                    <div style="font-size: 0.85rem; margin-bottom: 12px;">
-                        <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
-                            <span style="color: #94A3B8;">Prediction ID:</span>
-                            <span style="color: #38BDF8; font-weight: 700; font-family: monospace;">{p_code}</span>
-                        </div>
-                        <div style="display: flex; justify-content: space-between; margin-bottom: 12px;">
-                            <span style="color: #94A3B8;">Date & Time:</span>
-                            <span style="color: #CBD5E1;">{p_time}</span>
-                        </div>
-                    </div>
-                    """,
-                    unsafe_allow_html=True
-                )
-
-                st.markdown("<div style='font-size: 0.8rem; color: #94A3B8; margin-bottom: 4px; font-weight: 500;'>Full News Text:</div>", unsafe_allow_html=True)
-                st.markdown(
-                    f"""
-                    <div style="background-color: #070D18; border: 1px solid #1E293B; border-radius: 8px; padding: 12px; font-size: 0.85rem; color: #E2E8F0; max-height: 150px; overflow-y: auto; margin-bottom: 16px; line-height: 1.45;">
-                        {p_text}
-                    </div>
-                    """,
-                    unsafe_allow_html=True
-                )
-
-                badge_class = "badge-real" if p_label.lower() == "real" else "badge-fake"
-                icon = "✅" if p_label.lower() == "real" else "🛑"
-                verdict_sub = "This news is likely to be real and credible." if p_label.lower() == "real" else "This news contains suspicious or fabricated claims."
-
-                st.markdown(
-                    f"""
-                    <div style="margin-bottom: 14px;">
-                        <div style="font-size: 0.8rem; color: #94A3B8; margin-bottom: 6px; font-weight: 500;">Prediction Result:</div>
-                        <div class="fna-badge {badge_class}" style="font-size: 0.95rem; padding: 6px 14px; margin-bottom: 6px;">
-                            {icon} {p_label.title()} News
-                        </div>
-                        <div style="font-size: 0.8rem; color: #64748B;">{verdict_sub}</div>
-                    </div>
-                    <div style="margin-bottom: 14px;">
-                        <div style="display: flex; justify-content: space-between; font-size: 0.82rem; margin-bottom: 4px;">
-                            <span style="color: #94A3B8;">Confidence Score:</span>
-                            <span style="font-weight: 700; color: #F8FAFC;">{p_conf}%</span>
-                        </div>
-                    </div>
-                    """,
-                    unsafe_allow_html=True
-                )
-
-                st.progress(min(p_conf / 100.0, 1.0))
-
-                st.markdown(
-                    f"""
-                    <div style="margin: 14px 0 20px 0; font-size: 0.85rem; display: flex; justify-content: space-between;">
-                        <span style="color: #94A3B8;">Model Used:</span>
-                        <span style="font-weight: 600; color: #F8FAFC;">{p_model}</span>
-                    </div>
-                    """,
-                    unsafe_allow_html=True
-                )
-
-                if st.button("✅ Mark as Reviewed", use_container_width=True):
-                    if update_review_status(p_res_id, "Reviewed"):
-                        st.success(f"{p_code} marked as Reviewed!")
-                        st.rerun()
-
-            else:
-                st.info("Select a prediction from the table on the left to inspect its details.")
-
-            st.markdown('</div>', unsafe_allow_html=True)
+    elif "Settings" in admin_page:
+        render_admin_header()
+        st.markdown(
+            """
+            <div class="fna-card">
+                <div class="fna-card-header">
+                    <div class="fna-card-title">⚙️ Admin Control Panel</div>
+                </div>
+                <div style="font-size: 0.9rem; line-height: 1.8; color: #CBD5E1;">
+                    <h4 style="color: #F8FAFC; margin-bottom: 8px;">System Security & Thresholds</h4>
+                </div>
+            """,
+            unsafe_allow_html=True
+        )
+        st.slider("Automatic Review Quarantine Confidence Threshold (%)", 50, 95, 70)
+        st.selectbox("Database Backup Frequency", ["Every 24 Hours", "Every 6 Hours", "Real-Time WAL Mode"])
+        st.checkbox("Require 2-Factor Authentication for Model Retraining", value=False)
+        st.checkbox("Enable Live Web Verification Cross-Referencing", value=True)
+        if st.button("Save Admin Configuration"):
+            st.success("Admin configuration saved successfully!")
+        st.markdown('</div>', unsafe_allow_html=True)
 
 if __name__ == "__main__":
     main()
