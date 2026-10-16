@@ -25,8 +25,10 @@ inject_theme()
 with st.sidebar:
     st.markdown(
         """
-        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 25px;">
-            <span style="font-size: 2rem;">🛡️</span>
+        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 25px;">
+            <div style="background: linear-gradient(135deg, rgba(99, 102, 241, 0.3) 0%, rgba(6, 182, 212, 0.2) 100%); border: 1px solid rgba(99, 102, 241, 0.5); border-radius: 12px; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; font-size: 1.35rem; color: #818CF8; box-shadow: 0 0 16px rgba(99, 102, 241, 0.35);">
+                <i class="fa-solid fa-shield-halved"></i>
+            </div>
             <div>
                 <h3 style="margin: 0; font-size: 1.25rem; font-weight: 700;">FakeNewsAI</h3>
                 <div style="font-size: 0.8rem; color: #94A3B8;">Model Comparison</div>
@@ -36,12 +38,12 @@ with st.sidebar:
         unsafe_allow_html=True
     )
     if hasattr(st, "page_link"):
-        st.page_link("app.py", label="🏠 Main Application", icon=None)
-        st.page_link("pages/admin.py", label="⚙️ Admin Dashboard", icon=None)
+        st.page_link("app.py", label="Main Application", icon=":material/home:")
+        st.page_link("pages/admin.py", label="Admin Dashboard", icon=":material/admin_panel_settings:")
     else:
-        if st.button("🏠 Main Application", use_container_width=True):
+        if st.button("Main Application", icon=":material/home:", use_container_width=True):
             st.switch_page("app.py")
-        if st.button("⚙️ Admin Dashboard", use_container_width=True):
+        if st.button("Admin Dashboard", icon=":material/admin_panel_settings:", use_container_width=True):
             st.switch_page("pages/admin.py")
 
 render_model_comparison_page()

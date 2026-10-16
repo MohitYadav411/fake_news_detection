@@ -59,30 +59,24 @@ def load_metrics(model_name):
     return None
 
 def render_admin_header():
-    col_head, col_user = st.columns([3, 1])
-    with col_head:
-        st.markdown(
-            """
-            <div style="margin-bottom: 20px;">
+    st.markdown(
+        """
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 20px;">
+            <div style="min-width: 250px; flex: 1 1 280px;">
                 <h1 style="margin: 0; font-size: 1.85rem; font-weight: 800; color: #F8FAFC;">Admin Dashboard</h1>
-                <p style="margin: 4px 0 0 0; color: #94A3B8; font-size: 0.95rem;">
+                <p style="margin: 4px 0 0 0; color: #94A3B8; font-size: 0.9rem;">
                     Monitor, analyze and manage your Fake News Detection System
                 </p>
             </div>
-            """,
-            unsafe_allow_html=True
-        )
-    with col_user:
-        st.markdown(
-            """
-            <div style="display: flex; align-items: center; justify-content: flex-end; margin-top: 8px;">
+            <div>
                 <span class="fna-pill-ai" style="padding: 5px 12px; font-size: 0.8rem;">
                     <span style="color: #10B981;">●</span> System Online
                 </span>
             </div>
-            """,
-            unsafe_allow_html=True
-        )
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 
 def main():
     # Admin Authentication
@@ -95,7 +89,9 @@ def main():
             st.markdown(
                 """
                 <div style="background-color: #0F172A; border: 1px solid #1E293B; border-radius: 12px; padding: 2rem; margin-top: 60px; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35); text-align: center;">
-                    <span style="font-size: 2.4rem;">🛡️</span>
+                    <div style="display: inline-flex; align-items: center; justify-content: center; width: 64px; height: 64px; border-radius: 16px; background: linear-gradient(135deg, rgba(99, 102, 241, 0.25) 0%, rgba(6, 182, 212, 0.15) 100%); border: 1px solid rgba(99, 102, 241, 0.4); font-size: 2rem; color: #818CF8; box-shadow: 0 0 20px rgba(99, 102, 241, 0.3); margin-bottom: 8px;">
+                        <i class="fa-solid fa-lock"></i>
+                    </div>
                     <h2 style="margin: 12px 0 6px 0; color: #F8FAFC; font-size: 1.4rem; font-weight: 700;">Admin Portal</h2>
                     <p style="color: #64748B; font-size: 0.85rem; margin-bottom: 20px;">Please enter password to access the panel.</p>
                 </div>
@@ -115,45 +111,48 @@ def main():
     with st.sidebar:
         st.markdown(
             """
-            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 25px;">
-                <span style="font-size: 2rem;">🛡️</span>
+            <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 28px; padding-bottom: 15px; border-bottom: 1px solid rgba(51, 65, 85, 0.6);">
+                <div style="background: linear-gradient(135deg, rgba(99, 102, 241, 0.3) 0%, rgba(6, 182, 212, 0.2) 100%); border: 1px solid rgba(99, 102, 241, 0.5); border-radius: 12px; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; font-size: 1.35rem; color: #818CF8; box-shadow: 0 0 16px rgba(99, 102, 241, 0.35);">
+                    <i class="fa-solid fa-shield-halved"></i>
+                </div>
                 <div>
-                    <h3 style="margin: 0; font-size: 1.25rem; font-weight: 700;">FakeNewsAI</h3>
-                    <div style="font-size: 0.8rem; color: #94A3B8;">Admin Panel</div>
+                    <h3 style="margin: 0; font-size: 1.3rem; font-weight: 800; background: linear-gradient(135deg, #FFFFFF 0%, #CBD5E1 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">FakeNewsAI</h3>
+                    <div style="font-size: 0.78rem; color: #818CF8; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase;">Admin Console</div>
                 </div>
             </div>
             """, 
             unsafe_allow_html=True
         )
         
-        admin_nav_options = [
-            "Overview (Dashboard)",
-            "Prediction History",
-            "Dataset Manager",
-            "Model Training",
-            "Model Insights",
-            "System Logs"
+        st.markdown("<p style='font-size: 0.78rem; font-weight: 700; color: #6D4AFF; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 12px;'><i class='fa-solid fa-terminal' style='margin-right: 6px;'></i>Console Menu</p>", unsafe_allow_html=True)
+        
+        admin_nav_items = [
+            ("Overview (Dashboard)", "Overview", ":material/dashboard:"),
+            ("Prediction History", "Prediction History", ":material/history:"),
+            ("Dataset Manager", "Dataset Manager", ":material/folder_open:"),
+            ("Model Training", "Model Training", ":material/model_training:")
         ]
+        
         if "admin_nav_sel" not in st.session_state:
             st.session_state.admin_nav_sel = "Overview (Dashboard)"
             
-        def_admin_idx = admin_nav_options.index(st.session_state.admin_nav_sel) if st.session_state.admin_nav_sel in admin_nav_options else 0
-        admin_page = st.radio(
-            "Admin Section",
-            admin_nav_options,
-            index=def_admin_idx,
-            label_visibility="collapsed"
-        )
-        st.session_state.admin_nav_sel = admin_page
+        for page_key, display_label, icon_name in admin_nav_items:
+            is_active = (st.session_state.admin_nav_sel == page_key)
+            btn_type = "primary" if is_active else "secondary"
+            if st.button(display_label, key=f"admin_nav_{page_key}", type=btn_type, icon=icon_name, use_container_width=True):
+                st.session_state.admin_nav_sel = page_key
+                st.rerun()
+
+        admin_page = st.session_state.admin_nav_sel
         
         st.markdown("<hr style='border-color: #1E293B; margin: 30px 0 20px 0;'>", unsafe_allow_html=True)
         if hasattr(st, "page_link"):
-            st.page_link("app.py", label="🏠 Back to Main App", icon=None)
+            st.page_link("app.py", label="Back to Main App", icon=":material/arrow_back:")
         else:
-            if st.button("🏠 Back to Main App", use_container_width=True):
+            if st.button("Back to Main App", icon=":material/arrow_back:", use_container_width=True):
                 st.switch_page("app.py")
                 
-        if st.button("🔒 Logout", use_container_width=True):
+        if st.button("Logout", icon=":material/logout:", use_container_width=True):
             st.session_state.admin_authenticated = False
             st.rerun()
 
@@ -175,17 +174,17 @@ def main():
         # Top 6 KPI Cards (Live Real-Time Values)
         kpi_cols = st.columns(6)
         with kpi_cols[0]:
-            render_kpi("Total Predictions", f"{display_total:,}", "Live query records", "#3B82F6", "📄")
+            render_kpi("Total Predictions", f"{display_total:,}", "Live query records", "#3B82F6", '<i class="fa-solid fa-database" style="color: #60A5FA;"></i>')
         with kpi_cols[1]:
-            render_kpi("Real News", f"{display_real:,}", f"{real_pct}% of total", "#10B981", "✅")
+            render_kpi("Real News", f"{display_real:,}", f"{real_pct}% of total", "#10B981", '<i class="fa-solid fa-circle-check" style="color: #34D399;"></i>')
         with kpi_cols[2]:
-            render_kpi("Fake News", f"{display_fake:,}", f"{fake_pct}% of total", "#EF4444", "❌")
+            render_kpi("Fake News", f"{display_fake:,}", f"{fake_pct}% of total", "#EF4444", '<i class="fa-solid fa-triangle-exclamation" style="color: #FB7185;"></i>')
         with kpi_cols[3]:
-            render_kpi("Unverified", f"{display_unverified:,}", f"{unv_pct}% of total", "#F59E0B", "❓")
+            render_kpi("Unverified", f"{display_unverified:,}", f"{unv_pct}% of total", "#F59E0B", '<i class="fa-solid fa-circle-question" style="color: #FBBF24;"></i>')
         with kpi_cols[4]:
-            render_kpi("Avg. Inference Time", f"{kpis['avg_inference']}s", "Real-time latency", "#A855F7", "⚡")
+            render_kpi("Avg. Latency", f"{kpis['avg_inference']}s", "Real-time latency", "#A855F7", '<i class="fa-solid fa-bolt" style="color: #C084FC;"></i>')
         with kpi_cols[5]:
-            render_kpi("Best Model (F1)", f"{kpis['best_f1']}", f"{kpis['best_model']} 🏆", "#3B82F6", "⚙️")
+            render_kpi("Best Model", f"{kpis['best_f1']}", f"{kpis['best_model']}", "#3B82F6", '<i class="fa-solid fa-award" style="color: #FBBF24;"></i>')
 
         st.markdown("<div style='height: 15px;'></div>", unsafe_allow_html=True)
 
@@ -197,7 +196,7 @@ def main():
                 """
                 <div class="fna-card">
                     <div class="fna-card-header">
-                        <div class="fna-card-title">📊 Model Performance Comparison</div>
+                        <div class="fna-card-title"><i class="fa-solid fa-chart-column" style="color: #818CF8; margin-right: 6px;"></i>Model Performance Comparison</div>
                     </div>
                 """,
                 unsafe_allow_html=True
@@ -223,7 +222,7 @@ def main():
                         "Precision": round(mets.get("precision", 0), 3),
                         "Recall": round(mets.get("recall", 0), 3),
                         "F1-Score": round(mets.get("f1", 0), 3),
-                        "Status": "🏆 Best" if m == best_f1_key else "Active"
+                        "Status": "⭐ Top" if m == best_f1_key else "Active"
                     })
             if perf_list:
                 df_perf = pd.DataFrame(perf_list)
@@ -237,7 +236,7 @@ def main():
                 """
                 <div class="fna-card">
                     <div class="fna-card-header">
-                        <div class="fna-card-title">📈 Confusion Matrix & Report</div>
+                        <div class="fna-card-title"><i class="fa-solid fa-table-cells" style="color: #38BDF8; margin-right: 6px;"></i>Confusion Matrix & Report</div>
                     </div>
                 """,
                 unsafe_allow_html=True
@@ -280,7 +279,7 @@ def main():
                 """
                 <div class="fna-card">
                     <div class="fna-card-header">
-                        <div class="fna-card-title">☁️ Word Clouds (Text Analysis)</div>
+                        <div class="fna-card-title"><i class="fa-solid fa-cloud" style="color: #60A5FA; margin-right: 6px;"></i>Word Clouds (Text Analysis)</div>
                     </div>
                 """,
                 unsafe_allow_html=True
@@ -299,7 +298,7 @@ def main():
                 """
                 <div class="fna-card">
                     <div class="fna-card-header">
-                        <div class="fna-card-title">🍩 Prediction Distribution</div>
+                        <div class="fna-card-title"><i class="fa-solid fa-chart-pie" style="color: #C084FC; margin-right: 6px;"></i>Prediction Distribution</div>
                     </div>
                 """,
                 unsafe_allow_html=True
@@ -348,7 +347,7 @@ def main():
                 """
                 <div class="fna-card">
                     <div class="fna-card-header">
-                        <div class="fna-card-title">📋 Recent Predictions / Review Queue</div>
+                        <div class="fna-card-title"><i class="fa-solid fa-list-check" style="color: #38BDF8; margin-right: 6px;"></i>Recent Predictions / Review Queue</div>
                     </div>
                 """,
                 unsafe_allow_html=True
@@ -380,7 +379,7 @@ def main():
                 f"""
                 <div class="fna-card">
                     <div class="fna-card-header">
-                        <div class="fna-card-title">💾 Dataset Summary</div>
+                        <div class="fna-card-title"><i class="fa-solid fa-database" style="color: #60A5FA; margin-right: 6px;"></i>Dataset Summary</div>
                     </div>
                     <div style="font-size: 0.85rem; line-height: 1.8;">
                         <div style="display: flex; justify-content: space-between;">
@@ -418,7 +417,7 @@ def main():
                 f"""
                 <div class="fna-card">
                     <div class="fna-card-header">
-                        <div class="fna-card-title">🔄 Model Retraining</div>
+                        <div class="fna-card-title"><i class="fa-solid fa-arrows-rotate" style="color: #34D399; margin-right: 6px;"></i>Model Retraining</div>
                     </div>
                     <div style="font-size: 0.85rem; line-height: 1.8; margin-bottom: 15px;">
                         <div style="display: flex; justify-content: space-between;">
@@ -477,7 +476,7 @@ def main():
             """
             <div class="fna-card">
                 <div class="fna-card-header">
-                    <div class="fna-card-title">⚙️ Admin Control Panel</div>
+                    <div class="fna-card-title"><i class="fa-solid fa-sliders" style="color: #60A5FA; margin-right: 6px;"></i>Admin Control Panel</div>
                 </div>
                 <div style="font-size: 0.9rem; line-height: 1.8; color: #CBD5E1;">
                     <h4 style="color: #F8FAFC; margin-bottom: 8px;">System Security & Thresholds</h4>

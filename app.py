@@ -55,38 +55,46 @@ def main():
     with st.sidebar:
         st.markdown(
             """
-            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 25px;">
-                <span style="font-size: 2rem;">🛡️</span>
+            <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 28px; padding-bottom: 15px; border-bottom: 1px solid rgba(51, 65, 85, 0.6);">
+                <div style="background: linear-gradient(135deg, rgba(99, 102, 241, 0.3) 0%, rgba(6, 182, 212, 0.2) 100%); border: 1px solid rgba(99, 102, 241, 0.5); border-radius: 12px; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; font-size: 1.35rem; color: #818CF8; box-shadow: 0 0 16px rgba(99, 102, 241, 0.35);">
+                    <i class="fa-solid fa-shield-halved"></i>
+                </div>
                 <div>
-                    <h3 style="margin: 0; font-size: 1.25rem; font-weight: 700;">FakeNewsAI</h3>
-                    <div style="font-size: 0.8rem; color: #94A3B8;">Detection System</div>
+                    <h3 style="margin: 0; font-size: 1.3rem; font-weight: 800; background: linear-gradient(135deg, #FFFFFF 0%, #CBD5E1 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">FakeNewsAI</h3>
+                    <div style="font-size: 0.78rem; color: #818CF8; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase;">Detection Studio</div>
                 </div>
             </div>
             """, 
             unsafe_allow_html=True
         )
         
-        st.markdown("<p style='font-size: 0.8rem; font-weight: 600; color: #64748B; text-transform: uppercase;'>Navigation</p>", unsafe_allow_html=True)
-        nav_options = [
-            "Home (Check News)",
-            "Prediction History",
-            "Model Comparison",
-            "Model Insights"
+        st.markdown("<p style='font-size: 0.78rem; font-weight: 700; color: #6D4AFF; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 12px;'><i class='fa-solid fa-compass' style='margin-right: 6px;'></i>Navigation</p>", unsafe_allow_html=True)
+        
+        nav_items = [
+            ("Home (Check News)", "Check News", ":material/search_check:"),
+            ("Prediction History", "Prediction History", ":material/history:"),
+            ("Model Comparison", "Model Comparison", ":material/balance:"),
+            ("Model Insights", "Model Insights", ":material/insights:")
         ]
         
         if "app_nav" not in st.session_state:
             st.session_state.app_nav = "Home (Check News)"
             
-        default_idx = nav_options.index(st.session_state.app_nav) if st.session_state.app_nav in nav_options else 0
-        page = st.radio("Navigation", nav_options, index=default_idx, label_visibility="collapsed")
-        st.session_state.app_nav = page
+        for page_key, display_label, icon_name in nav_items:
+            is_active = (st.session_state.app_nav == page_key)
+            btn_type = "primary" if is_active else "secondary"
+            if st.button(display_label, key=f"main_nav_{page_key}", type=btn_type, icon=icon_name, use_container_width=True):
+                st.session_state.app_nav = page_key
+                st.rerun()
+
+        page = st.session_state.app_nav
         
-        st.markdown("<hr style='border-color: #1E293B; margin: 25px 0 20px 0;'>", unsafe_allow_html=True)
+        st.markdown("<hr style='border-color: rgba(109, 74, 255, 0.2); margin: 25px 0 20px 0;'>", unsafe_allow_html=True)
         st.markdown(
             """
-            <div style="background-color: #0F172A; border: 1px solid #1E293B; border-radius: 8px; padding: 12px; font-size: 0.8rem; color: #94A3B8;">
-                <span style="color: #10B981; font-weight: 600;">● Active System</span><br>
-                11 detection models active with real-time analytics.
+            <div style="background: linear-gradient(135deg, rgba(16, 28, 51, 0.9) 0%, rgba(10, 18, 36, 0.95) 100%); border: 1px solid rgba(109, 74, 255, 0.25); border-radius: 10px; padding: 14px; font-size: 0.82rem; color: #A3B5D9; box-shadow: 0 4px 15px rgba(0,0,0,0.25);">
+                <span style="color: #10B981; font-weight: 700;"><i class="fa-solid fa-bolt" style="margin-right: 6px;"></i>Active Intelligence</span><br>
+                11 deep learning & ML models active with real-time audit trail.
             </div>
             """,
             unsafe_allow_html=True
@@ -95,31 +103,31 @@ def main():
     # Main Area
     if page == "Home (Check News)":
         # Top Header Row
-        col_title, col_status = st.columns([3, 1])
-        with col_title:
-            st.markdown(
-                """
-                <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
-                    <span style="font-size: 2rem;">📰</span>
-                    <h1 style="margin: 0; font-size: 1.85rem; font-weight: 800; color: #F8FAFC;">Fake News Detection System</h1>
+        st.markdown(
+            """
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px; margin-bottom: 12px;">
+                <div style="display: flex; align-items: center; gap: 14px; min-width: 260px; flex: 1 1 300px;">
+                    <div class="fna-header-icon" style="flex-shrink: 0;">
+                        <i class="fa-solid fa-newspaper"></i>
+                    </div>
+                    <div>
+                        <h1 style="margin: 0; font-size: 1.85rem; font-weight: 800; background: linear-gradient(135deg, #FFFFFF 0%, #E2E8F0 50%, #94A3B8 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
+                            Fake News Detection System
+                        </h1>
+                        <p style="color: #94A3B8; font-size: 0.9rem; margin: 2px 0 0 0;">
+                            Verify headlines, claims, and articles in real-time across ensemble AI models.
+                        </p>
+                    </div>
                 </div>
-                <p style="color: #94A3B8; font-size: 0.95rem; margin-top: 0;">
-                    Enter a news article, headline or claim below to check if it's real or fake using AI and trained models.
-                </p>
-                """,
-                unsafe_allow_html=True
-            )
-        with col_status:
-            st.markdown(
-                """
-                <div style="text-align: right; margin-top: 10px;">
+                <div>
                     <span class="fna-pill-ai">
-                        <span style="color: #10B981;">●</span> AI Powered <span style="color: #64748B;">|</span> Using trained models
+                        <i class="fa-solid fa-microchip" style="color: #10B981;"></i> AI Ensemble <span style="color: #64748B;">|</span> 11 Models Active
                     </span>
                 </div>
-                """,
-                unsafe_allow_html=True
-            )
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
 
         # Main Input Card
         # st.markdown('<div class="fna-card">', unsafe_allow_html=True)
@@ -156,10 +164,12 @@ def main():
         with col_controls:
             col_tier, col_btn = st.columns([1.3, 1])
             with col_tier:
+                tier_keys = list(TIER_OPTIONS.keys())
+                ensemble_idx = tier_keys.index("Ensemble (Majority Vote - All Models)") if "Ensemble (Majority Vote - All Models)" in tier_keys else 0
                 selected_tier = st.selectbox(
                     "Select Model Tier",
-                    list(TIER_OPTIONS.keys()),
-                    index=0,
+                    tier_keys,
+                    index=ensemble_idx,
                     label_visibility="collapsed"
                 )
             with col_btn:
@@ -181,7 +191,9 @@ def main():
                 fake_count = 0
                 
                 for m_name in models_to_run:
+                    m_start = time.time()
                     res = predict(raw_text, m_name)
+                    m_dur = round(time.time() - m_start, 2)
                     if "error" not in res:
                         label = res["label"]
                         conf = res["confidence"]
@@ -194,8 +206,9 @@ def main():
                             "label": label,
                             "confidence": conf
                         })
-                        # Log to db
-                        log_query(raw_text, cleaned_text, m_name, label, conf, inference_time=0.38, status="Reviewed")
+                        # Live dynamic status: borderline confidence (< 65%) marked as Pending review
+                        initial_status = "Pending" if conf < 65.0 else "Reviewed"
+                        log_query(raw_text, cleaned_text, m_name, label, conf, inference_time=max(m_dur, 0.15), status=initial_status)
                         log_system_event("INFO", "Predictor", f"{m_name.replace('_', ' ').title()} classified query as {label} ({conf}%)")
                 
                 inference_sec = round(time.time() - start_time, 2)
@@ -208,23 +221,24 @@ def main():
                     final_label = "Real" if real_count >= fake_count else "Fake"
                     vote_ratio = f"{max(real_count, fake_count)} of {len(results)}"
                     badge_style = "badge-real" if final_label == "Real" else "badge-fake"
-                    badge_icon = "🎯" if final_label == "Real" else "🛑"
+                    badge_icon = '<i class="fa-solid fa-circle-check"></i>' if final_label == "Real" else '<i class="fa-solid fa-triangle-exclamation"></i>'
                     avg_conf = round(sum(r["confidence"] for r in results) / len(results), 1)
 
                     st.markdown(
                         f"""
-                        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #1E293B; padding-bottom: 12px; margin-bottom: 16px;">
-                            <div>
-                                <span class="fna-badge {badge_style}" style="font-size: 1.15rem; padding: 6px 16px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; border-bottom: 1px solid #1E293B; padding-bottom: 12px; margin-bottom: 16px;">
+                            <div style="min-width: 240px; flex: 1 1 280px;">
+                                <span class="fna-badge {badge_style}" style="font-size: 1.05rem; padding: 6px 14px; max-width: 100%; word-break: break-word;">
                                     {badge_icon} FINAL VERDICT: {final_label.upper()} NEWS
                                 </span>
-                                <div style="font-size: 0.85rem; color: #94A3B8; margin-top: 8px;">
-                                    Ensemble Consensus: <b>{vote_ratio} models agree</b> | Inference: <b>{inference_sec}s</b>
+                                <div style="font-size: 0.82rem; color: #94A3B8; margin-top: 8px; line-height: 1.5;">
+                                    <i class="fa-solid fa-users-viewfinder" style="margin-right: 4px;"></i> Ensemble Consensus: <b>{vote_ratio} models agree</b><br>
+                                    <i class="fa-solid fa-stopwatch" style="margin-right: 4px;"></i> Inference: <b>{inference_sec}s</b>
                                 </div>
                             </div>
-                            <div style="text-align: right;">
-                                <div style="font-size: 0.8rem; color: #64748B;">Average Confidence</div>
-                                <div style="font-size: 1.5rem; font-weight: 700; color: #F8FAFC;">{avg_conf}%</div>
+                            <div style="text-align: right; min-width: 110px;">
+                                <div style="font-size: 0.78rem; color: #64748B;">Average Confidence</div>
+                                <div style="font-size: 1.45rem; font-weight: 700; color: #F8FAFC;">{avg_conf}%</div>
                             </div>
                         </div>
                         """,
@@ -233,7 +247,7 @@ def main():
                     
                     st.progress(min(avg_conf / 100.0, 1.0))
                     
-                    st.markdown("<p style='font-weight: 600; font-size: 0.95rem; margin-top: 15px; color: #F8FAFC;'>Individual Model Predictions:</p>", unsafe_allow_html=True)
+                    st.markdown("<p style='font-weight: 600; font-size: 0.95rem; margin-top: 15px; color: #F8FAFC;'><i class='fa-solid fa-layer-group' style='margin-right: 6px;'></i>Individual Model Predictions:</p>", unsafe_allow_html=True)
                     df_res = pd.DataFrame([
                         {
                             "Model": r["model"].replace('_', ' ').title(),
@@ -248,7 +262,7 @@ def main():
                     st.markdown(
                         f"""
                         <div style="border-bottom: 1px solid #1E293B; padding-bottom: 10px; margin-bottom: 16px;">
-                            <h3 style="margin: 0; font-size: 1.1rem; color: #F8FAFC;">Model Prediction Results ({len(results)} Models)</h3>
+                            <h3 style="margin: 0; font-size: 1.1rem; color: #F8FAFC;"><i class="fa-solid fa-chart-simple" style="margin-right: 6px;"></i>Model Prediction Results ({len(results)} Models)</h3>
                             <div style="font-size: 0.8rem; color: #64748B;">Total processing time: {inference_sec}s</div>
                         </div>
                         """, 
@@ -259,7 +273,7 @@ def main():
                     for idx, r in enumerate(results):
                         with cols[idx]:
                             badge_style = "badge-real" if r["label"] == "Real" else "badge-fake"
-                            badge_icon = "✅" if r["label"] == "Real" else "❌"
+                            badge_icon = '<i class="fa-solid fa-circle-check"></i>' if r["label"] == "Real" else '<i class="fa-solid fa-circle-xmark"></i>'
                             st.markdown(
                                 f"""
                                 <div style="background-color: #0B1120; border: 1px solid #1E293B; border-radius: 8px; padding: 12px; text-align: center;">
@@ -286,10 +300,10 @@ def main():
             st.markdown(
                 """
                 <div class="fna-empty-state">
-                    <div class="fna-empty-icon">📑</div>
-                    <h3 style="margin: 0 0 6px 0; font-size: 1.15rem; font-weight: 600; color: #F8FAFC;">No analysis yet</h3>
+                    <div class="fna-empty-icon" style="color: #6366F1;"><i class="fa-solid fa-magnifying-glass-chart"></i></div>
+                    <h3 style="margin: 0 0 6px 0; font-size: 1.15rem; font-weight: 600; color: #F8FAFC;">Ready for Analysis</h3>
                     <p style="color: #64748B; font-size: 0.9rem; margin: 0;">
-                        Enter a news article or headline above and click "Check News" to see the result.
+                        Enter a news article or headline above and click "Check News" to run our neural ensemble verification.
                     </p>
                 </div>
                 """,
@@ -312,8 +326,8 @@ def main():
         st.markdown(
             """
             <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 20px;">
-                <div style="background-color: rgba(59, 130, 246, 0.15); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 12px; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; font-size: 1.4rem;">
-                    ⚙️
+                <div style="background-color: rgba(59, 130, 246, 0.15); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 12px; width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; font-size: 1.4rem; color: #60A5FA;">
+                    <i class="fa-solid fa-sliders"></i>
                 </div>
                 <div>
                     <h1 style="margin: 0; font-size: 1.85rem; font-weight: 800; color: #F8FAFC;">System Settings</h1>
@@ -324,7 +338,7 @@ def main():
             unsafe_allow_html=True
         )
         st.markdown('<div class="fna-card">', unsafe_allow_html=True)
-        st.markdown("<h4 style='color: #F8FAFC; margin-top: 0;'>Inference & Detection Preferences</h4>", unsafe_allow_html=True)
+        st.markdown("<h4 style='color: #F8FAFC; margin-top: 0;'><i class='fa-solid fa-microchip' style='margin-right: 6px;'></i>Inference & Detection Preferences</h4>", unsafe_allow_html=True)
         def_tier = st.selectbox("Default Model Tier", ["Basic", "Intermediate", "Hardcore", "Ensemble (Majority Vote - All Models)"], index=3)
         min_conf = st.slider("Confidence Alert Threshold (%)", min_value=50, max_value=95, value=75)
         st.checkbox("Enable real-time linguistic feature extraction", value=True)
@@ -338,8 +352,8 @@ def main():
         st.markdown(
             """
             <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 20px;">
-                <div style="background-color: rgba(168, 85, 247, 0.15); border: 1px solid rgba(168, 85, 247, 0.3); border-radius: 12px; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; font-size: 1.4rem;">
-                    ℹ️
+                <div style="background-color: rgba(168, 85, 247, 0.15); border: 1px solid rgba(168, 85, 247, 0.3); border-radius: 12px; width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; font-size: 1.4rem; color: #C084FC;">
+                    <i class="fa-solid fa-circle-info"></i>
                 </div>
                 <div>
                     <h1 style="margin: 0; font-size: 1.85rem; font-weight: 800; color: #F8FAFC;">About FakeNewsAI</h1>
@@ -352,7 +366,7 @@ def main():
         st.markdown(
             """
             <div class="fna-card">
-                <h3 style="color: #38BDF8; margin-top: 0;">🛡️ Architecture & Design</h3>
+                <h3 style="color: #38BDF8; margin-top: 0;"><i class="fa-solid fa-shield-halved" style="margin-right: 6px;"></i>Architecture & Design</h3>
                 <p style="color: #CBD5E1; font-size: 0.92rem; line-height: 1.7;">
                     FakeNewsAI is an end-to-end artificial intelligence decision support system designed to identify misinformation and synthetic news articles. 
                     It combines classical natural language processing (TF-IDF with Logistic Regression, Random Forest, Naive Bayes, Decision Trees, Linear SVM) 
@@ -360,15 +374,15 @@ def main():
                 </p>
                 <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-top: 15px;">
                     <div style="background-color: #070D18; border: 1px solid #1E293B; border-radius: 8px; padding: 12px;">
-                        <b style="color: #34D399;">11 Active Models</b>
+                        <b style="color: #34D399;"><i class="fa-solid fa-brain" style="margin-right: 6px;"></i>11 Active Models</b>
                         <div style="font-size: 0.8rem; color: #94A3B8; margin-top: 4px;">Basic, Intermediate, Hardcore and Ensemble tiers</div>
                     </div>
                     <div style="background-color: #070D18; border: 1px solid #1E293B; border-radius: 8px; padding: 12px;">
-                        <b style="color: #38BDF8;">338,277 Dataset</b>
+                        <b style="color: #38BDF8;"><i class="fa-solid fa-database" style="margin-right: 6px;"></i>338,277 Dataset</b>
                         <div style="font-size: 0.8rem; color: #94A3B8; margin-top: 4px;">Indexed articles from ISOT, Kaggle, and verified sources</div>
                     </div>
                     <div style="background-color: #070D18; border: 1px solid #1E293B; border-radius: 8px; padding: 12px;">
-                        <b style="color: #FBBF24;">Real-time Audit</b>
+                        <b style="color: #FBBF24;"><i class="fa-solid fa-clock-rotate-left" style="margin-right: 6px;"></i>Real-time Audit</b>
                         <div style="font-size: 0.8rem; color: #94A3B8; margin-top: 4px;">SQLite persistent transaction & query logging</div>
                     </div>
                 </div>
@@ -384,7 +398,7 @@ def main():
         st.markdown(
             """
             <div style="font-size: 0.85rem; color: #64748B;">
-                🛡️ <b>FakeNewsAI</b> — Advanced Multi-Model Detection & Analysis System<br>
+                <i class="fa-solid fa-shield-halved" style="color: #818CF8; margin-right: 4px;"></i> <b>FakeNewsAI</b> — Advanced Multi-Model Detection & Analysis System<br>
                 <span style="font-size: 0.78rem; color: #475569;">System authorized for research and evaluation purposes.</span>
             </div>
             """,
@@ -392,9 +406,9 @@ def main():
         )
     with footer_col2:
         if hasattr(st, "page_link"):
-            st.page_link("pages/admin.py", label="⚙️ Admin Panel", icon=None)
+            st.page_link("pages/admin.py", label="Admin Panel", icon=":material/admin_panel_settings:")
         else:
-            if st.button("⚙️ Open Admin Panel"):
+            if st.button("Admin Panel", icon=":material/admin_panel_settings:"):
                 st.switch_page("pages/admin.py")
 
 if __name__ == "__main__":

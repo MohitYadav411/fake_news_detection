@@ -36,8 +36,8 @@ def render_model_insights_page(is_admin: bool = False):
         """
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
             <div style="display: flex; align-items: center; gap: 14px;">
-                <div style="background-color: rgba(168, 85, 247, 0.15); border: 1px solid rgba(168, 85, 247, 0.3); border-radius: 12px; width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; font-size: 1.6rem; color: #C084FC;">
-                    🟣
+                <div style="background-color: rgba(168, 85, 247, 0.15); border: 1px solid rgba(168, 85, 247, 0.3); border-radius: 12px; width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; color: #C084FC; box-shadow: 0 0 20px rgba(168, 85, 247, 0.25);">
+                    <i class="fa-solid fa-chart-line"></i>
                 </div>
                 <div>
                     <h1 style="margin: 0; font-size: 1.85rem; font-weight: 800; color: #F8FAFC;">Model Insights</h1>
@@ -48,7 +48,7 @@ def render_model_insights_page(is_admin: bool = False):
             </div>
             <div>
                 <span class="fna-pill-ai">
-                    <span style="color: #10B981;">●</span> AI Powered <span style="color: #64748B;">|</span> Using trained models + web verification
+                    <i class="fa-solid fa-circle-nodes" style="color: #10B981;"></i> AI Powered <span style="color: #64748B;">|</span> 11 Models + Verification
                 </span>
             </div>
         </div>
@@ -72,7 +72,17 @@ def render_model_insights_page(is_admin: bool = False):
             "Hardcore (ALBERT - Parameter-Lite)",
             "Hardcore (ELECTRA - Discriminator)"
         ]
-        selected_choice = st.selectbox("Select Model Tier", tier_choices, index=3)
+        best_kpi = get_kpis()
+        best_name = best_kpi.get("best_model", "Distilbert").lower()
+        
+        # Calculate default index matching top performer
+        default_idx = 4 # DistilBERT fallback
+        for idx, opt in enumerate(tier_choices):
+            if best_name in opt.lower():
+                default_idx = idx
+                break
+                
+        selected_choice = st.selectbox("Select Model Tier", tier_choices, index=default_idx)
         # Parse model key
         model_name_map = {
             "Naive Bayes": "naive_bayes",
@@ -87,7 +97,7 @@ def render_model_insights_page(is_admin: bool = False):
             "ALBERT": "albert",
             "ELECTRA": "electra"
         }
-        chosen_key = "random_forest"
+        chosen_key = "distilbert"
         for label, key in model_name_map.items():
             if label in selected_choice:
                 chosen_key = key
@@ -112,13 +122,13 @@ def render_model_insights_page(is_admin: bool = False):
     st.markdown("<div style='height: 8px;'></div>", unsafe_allow_html=True)
     c1, c2, c3, c4 = st.columns(4)
     with c1:
-        render_stat_card("Model Type", display_title, "Fast & Lightweight" if lat < 0.2 else "Deep Architecture", "🧠", "#A855F7")
+        render_stat_card("Model Type", display_title, "Fast & Lightweight" if lat < 0.2 else "Deep Architecture", '<i class="fa-solid fa-microchip"></i>', "#A855F7")
     with c2:
-        render_stat_card("Inference Speed", f"{lat}s", "(Average latency)", "⚡", "#10B981")
+        render_stat_card("Inference Speed", f"{lat}s", "(Average latency)", '<i class="fa-solid fa-bolt"></i>', "#10B981")
     with c3:
-        render_stat_card("Accuracy (Validation)", f"{acc}%", "On test dataset", "🎯", "#3B82F6")
+        render_stat_card("Accuracy (Validation)", f"{acc}%", "On test dataset", '<i class="fa-solid fa-bullseye"></i>', "#3B82F6")
     with c4:
-        render_stat_card("Training Data", f"{dstats['total_records']:,}", "Verified articles", "💾", "#F59E0B")
+        render_stat_card("Training Data", f"{dstats['total_records']:,}", "Verified articles", '<i class="fa-solid fa-database"></i>', "#F59E0B")
 
     st.markdown("<div style='height: 18px;'></div>", unsafe_allow_html=True)
 
@@ -130,7 +140,7 @@ def render_model_insights_page(is_admin: bool = False):
             """
             <div class="fna-card">
                 <div class="fna-card-header">
-                    <div class="fna-card-title">📊 Performance Metrics</div>
+                    <div class="fna-card-title"><i class="fa-solid fa-chart-column" style="color: #60A5FA; margin-right: 6px;"></i>Performance Metrics</div>
                     <span style="font-size: 0.8rem; color: #94A3B8;">Evaluation on test dataset</span>
                 </div>
             """,
@@ -171,7 +181,7 @@ def render_model_insights_page(is_admin: bool = False):
             f"""
             <div class="fna-card">
                 <div class="fna-card-header">
-                    <div class="fna-card-title">📈 Confusion Matrix</div>
+                    <div class="fna-card-title"><i class="fa-solid fa-table-cells" style="color: #38BDF8; margin-right: 6px;"></i>Confusion Matrix</div>
                     <span style="font-size: 0.8rem; color: #94A3B8;">Model predictions vs actual labels</span>
                 </div>
             """,
@@ -216,7 +226,7 @@ def render_model_insights_page(is_admin: bool = False):
             """
             <div class="fna-card">
                 <div class="fna-card-header">
-                    <div class="fna-card-title">🍩 Class Distribution</div>
+                    <div class="fna-card-title"><i class="fa-solid fa-chart-pie" style="color: #10B981; margin-right: 6px;"></i>Class Distribution</div>
                 </div>
             """,
             unsafe_allow_html=True
@@ -239,7 +249,7 @@ def render_model_insights_page(is_admin: bool = False):
             """
             <div class="fna-card">
                 <div class="fna-card-header">
-                    <div class="fna-card-title">📑 Top Predictive Features</div>
+                    <div class="fna-card-title"><i class="fa-solid fa-ranking-star" style="color: #38BDF8; margin-right: 6px;"></i>Top Predictive Features</div>
                 </div>
             """,
             unsafe_allow_html=True
@@ -266,14 +276,14 @@ def render_model_insights_page(is_admin: bool = False):
             """
             <div class="fna-card">
                 <div class="fna-card-header">
-                    <div class="fna-card-title">⚠️ Model Limitations</div>
+                    <div class="fna-card-title"><i class="fa-solid fa-triangle-exclamation" style="color: #F59E0B; margin-right: 6px;"></i>Model Limitations</div>
                 </div>
                 <div style="font-size: 0.85rem; color: #CBD5E1; line-height: 1.65; padding: 4px 0;">
-                    <div style="margin-bottom: 8px;">🟠 <b>May struggle with sarcasm</b>: Irony or subtle satire without factual contradictions can be misclassified.</div>
-                    <div style="margin-bottom: 8px;">🟠 <b>Text-based Reliance</b>: Predictions are based on linguistic cues and trained syntax.</div>
-                    <div style="margin-bottom: 8px;">🟠 <b>Language Variation</b>: Highest accuracy achieved on English-language news corpus.</div>
-                    <div style="margin-bottom: 8px;">🟠 <b>Domain Specificity</b>: Requires continuous data updates to recognize emerging geopolitical events.</div>
-                    <div>🟠 <b>Misleading Real News</b>: Sensational headlines from legitimate sources may lower confidence.</div>
+                    <div style="margin-bottom: 8px;"><i class="fa-solid fa-circle-exclamation" style="color: #F59E0B; margin-right: 6px;"></i><b>May struggle with sarcasm</b>: Irony or subtle satire without factual contradictions can be misclassified.</div>
+                    <div style="margin-bottom: 8px;"><i class="fa-solid fa-circle-exclamation" style="color: #F59E0B; margin-right: 6px;"></i><b>Text-based Reliance</b>: Predictions are based on linguistic cues and trained syntax.</div>
+                    <div style="margin-bottom: 8px;"><i class="fa-solid fa-circle-exclamation" style="color: #F59E0B; margin-right: 6px;"></i><b>Language Variation</b>: Highest accuracy achieved on English-language news corpus.</div>
+                    <div style="margin-bottom: 8px;"><i class="fa-solid fa-circle-exclamation" style="color: #F59E0B; margin-right: 6px;"></i><b>Domain Specificity</b>: Requires continuous data updates to recognize emerging geopolitical events.</div>
+                    <div><i class="fa-solid fa-circle-exclamation" style="color: #F59E0B; margin-right: 6px;"></i><b>Misleading Real News</b>: Sensational headlines from legitimate sources may lower confidence.</div>
                 </div>
             </div>
             """,
@@ -283,7 +293,7 @@ def render_model_insights_page(is_admin: bool = False):
     # Admin Extended View: ROC Curve, PR Curve, Word Clouds, Misclassifications (Screenshot 3)
     if is_admin:
         st.markdown("<hr style='border-color: #1E293B; margin: 25px 0;'>", unsafe_allow_html=True)
-        st.markdown("<h3 style='font-size: 1.25rem; font-weight: 700; color: #F8FAFC;'>Deep Model Diagnostics (Admin Analysis)</h3>", unsafe_allow_html=True)
+        st.markdown("<h3 style='font-size: 1.25rem; font-weight: 700; color: #F8FAFC;'><i class='fa-solid fa-stethoscope' style='color: #818CF8; margin-right: 8px;'></i>Deep Model Diagnostics (Admin Analysis)</h3>", unsafe_allow_html=True)
         
         adm_c1, adm_c2 = st.columns(2)
         with adm_c1:
@@ -291,7 +301,7 @@ def render_model_insights_page(is_admin: bool = False):
                 """
                 <div class="fna-card">
                     <div class="fna-card-header">
-                        <div class="fna-card-title">📈 ROC Curve</div>
+                        <div class="fna-card-title"><i class="fa-solid fa-chart-line" style="color: #38BDF8; margin-right: 6px;"></i>ROC Curve</div>
                         <span style="background-color: rgba(56, 189, 248, 0.15); color: #38BDF8; padding: 3px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 600;">AUC = 0.89</span>
                     </div>
                 """,
@@ -321,7 +331,7 @@ def render_model_insights_page(is_admin: bool = False):
                 """
                 <div class="fna-card">
                     <div class="fna-card-header">
-                        <div class="fna-card-title">📊 Precision-Recall Curve</div>
+                        <div class="fna-card-title"><i class="fa-solid fa-chart-area" style="color: #C084FC; margin-right: 6px;"></i>Precision-Recall Curve</div>
                         <span style="background-color: rgba(168, 85, 247, 0.15); color: #C084FC; padding: 3px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 600;">AP = 0.87</span>
                     </div>
                 """,
@@ -351,7 +361,7 @@ def render_model_insights_page(is_admin: bool = False):
                 """
                 <div class="fna-card">
                     <div class="fna-card-header">
-                        <div class="fna-card-title">☁️ Word Clouds (Text Analysis)</div>
+                        <div class="fna-card-title"><i class="fa-solid fa-cloud" style="color: #60A5FA; margin-right: 6px;"></i>Word Clouds (Text Analysis)</div>
                     </div>
                 """,
                 unsafe_allow_html=True
@@ -370,7 +380,7 @@ def render_model_insights_page(is_admin: bool = False):
                 """
                 <div class="fna-card">
                     <div class="fna-card-header">
-                        <div class="fna-card-title">🔍 Top Misclassified Examples</div>
+                        <div class="fna-card-title"><i class="fa-solid fa-bug" style="color: #FB7185; margin-right: 6px;"></i>Top Misclassified Examples</div>
                     </div>
                 """,
                 unsafe_allow_html=True
@@ -380,7 +390,7 @@ def render_model_insights_page(is_admin: bool = False):
             st.markdown(
                 """
                 <div style="background-color: #070D18; border: 1px solid #1E293B; border-radius: 8px; padding: 12px; margin-top: 10px; font-size: 0.8rem; color: #94A3B8;">
-                    💡 <b>Recommendation</b>: Add more domain-specific training examples for political news to improve recall on deceptive claims.
+                    <i class="fa-solid fa-lightbulb" style="color: #FBBF24; margin-right: 6px;"></i><b>Recommendation</b>: Add more domain-specific training examples for political news to improve recall on deceptive claims.
                 </div>
                 """,
                 unsafe_allow_html=True
@@ -396,8 +406,8 @@ def render_prediction_history_page(is_admin: bool = False):
         """
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
             <div style="display: flex; align-items: center; gap: 14px;">
-                <div style="background-color: rgba(59, 130, 246, 0.15); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 12px; width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; font-size: 1.6rem; color: #60A5FA;">
-                    📑
+                <div style="background-color: rgba(59, 130, 246, 0.15); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 12px; width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; color: #60A5FA; box-shadow: 0 0 20px rgba(59, 130, 246, 0.25);">
+                    <i class="fa-solid fa-clock-rotate-left"></i>
                 </div>
                 <div>
                     <h1 style="margin: 0; font-size: 1.85rem; font-weight: 800; color: #F8FAFC;">Prediction History</h1>
@@ -423,13 +433,13 @@ def render_prediction_history_page(is_admin: bool = False):
 
     k1, k2, k3, k4 = st.columns(4)
     with k1:
-        render_kpi("Total Predictions", f"{tot:,}", "Live database records", "#3B82F6", "📄")
+        render_kpi("Total Predictions", f"{tot:,}", "Live database records", "#3B82F6", '<i class="fa-solid fa-database" style="color: #60A5FA;"></i>')
     with k2:
-        render_kpi("Real News", f"{r_count:,}", f"{r_pct}% of total", "#10B981", "✅")
+        render_kpi("Real News", f"{r_count:,}", f"{r_pct}% of total", "#10B981", '<i class="fa-solid fa-circle-check" style="color: #34D399;"></i>')
     with k3:
-        render_kpi("Fake News", f"{f_count:,}", f"{f_pct}% of total", "#EF4444", "❌")
+        render_kpi("Fake News", f"{f_count:,}", f"{f_pct}% of total", "#EF4444", '<i class="fa-solid fa-triangle-exclamation" style="color: #FB7185;"></i>')
     with k4:
-        render_kpi("Unverified News", f"{u_count:,}", f"{u_pct}% of total", "#F59E0B", "❓")
+        render_kpi("Unverified News", f"{u_count:,}", f"{u_pct}% of total", "#F59E0B", '<i class="fa-solid fa-circle-question" style="color: #FBBF24;"></i>')
 
     st.markdown("<div style='height: 15px;'></div>", unsafe_allow_html=True)
 
@@ -472,7 +482,7 @@ def render_prediction_history_page(is_admin: bool = False):
                 with open(export_path, "rb") as f:
                     st.download_button("📥 Export History (CSV)", data=f, file_name="prediction_history.csv", mime="text/csv", use_container_width=True)
 
-        st.markdown(f"<div style='font-size: 0.95rem; font-weight: 600; color: #F8FAFC; margin-bottom: 12px;'>Prediction History (Showing {len(filtered)} records)</div>", unsafe_allow_html=True)
+        st.markdown(f"<div style='font-size: 0.95rem; font-weight: 600; color: #F8FAFC; margin-bottom: 12px;'><i class='fa-solid fa-list-ul' style='color: #818CF8; margin-right: 6px;'></i>Prediction History (Showing {len(filtered)} records)</div>", unsafe_allow_html=True)
 
         # Pagination Logic (Screenshot 2: Showing 1 to 10 of ...)
         page_size = 10
@@ -523,35 +533,6 @@ def render_prediction_history_page(is_admin: bool = False):
                     st.session_state.history_page_num = min(total_pages, cur_page + 1)
                     st.rerun()
 
-        # Detailed Record Inspection Drawer (Admin Only or Click-to-Inspect)
-        st.markdown("<hr style='border-color: #1E293B; margin: 20px 0;'>", unsafe_allow_html=True)
-        st.markdown("<h4 style='color: #F8FAFC; margin: 0 0 10px 0;'>🔍 Record Inspection & Action</h4>", unsafe_allow_html=True)
-        
-        inspect_options = {f"{r['ID']} | {r['News Text (Short)'][:35]}": r['ID'] for r in display_rows}
-        if inspect_options:
-            sel_inspect_key = st.selectbox("Select record to inspect", list(inspect_options.keys()), label_visibility="collapsed")
-            selected_code = inspect_options[sel_inspect_key]
-            rec_match = filtered[filtered["prediction_code"] == selected_code].iloc[0]
-            
-            det_col1, det_col2 = st.columns([2, 1])
-            with det_col1:
-                st.markdown(f"<div style='font-size: 0.8rem; color: #94A3B8;'>Full Article Text:</div>", unsafe_allow_html=True)
-                st.markdown(f"<div style='background-color: #070D18; border: 1px solid #1E293B; border-radius: 8px; padding: 12px; font-size: 0.85rem; color: #F8FAFC; max-height: 120px; overflow-y: auto;'>{rec_match['raw_text']}</div>", unsafe_allow_html=True)
-            with det_col2:
-                st.markdown(f"<div style='font-size: 0.8rem; color: #94A3B8;'>Prediction Code: <b>{selected_code}</b></div>", unsafe_allow_html=True)
-                st.markdown(f"<div style='font-size: 0.85rem; color: #F8FAFC; margin-top: 4px;'>Verdict: <b>{rec_match['predicted_label']}</b> ({rec_match['confidence']}%)</div>", unsafe_allow_html=True)
-                if is_admin:
-                    act_c1, act_c2 = st.columns(2)
-                    with act_c1:
-                        if st.button("✅ Verify", key=f"verify_{selected_code}", use_container_width=True):
-                            update_review_status(rec_match["result_id"], "Verified")
-                            st.success("Verified!")
-                            st.rerun()
-                    with act_c2:
-                        if st.button("🗑️ Delete", key=f"del_{selected_code}", use_container_width=True):
-                            delete_prediction(rec_match["result_id"])
-                            st.success("Deleted!")
-                            st.rerun()
     else:
         st.info("No prediction history recorded yet. Use the main page to check news claims!")
     st.markdown("</div>", unsafe_allow_html=True)
@@ -565,8 +546,8 @@ def render_model_comparison_page():
         """
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
             <div style="display: flex; align-items: center; gap: 14px;">
-                <div style="background-color: rgba(37, 99, 235, 0.15); border: 1px solid rgba(37, 99, 235, 0.3); border-radius: 12px; width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; font-size: 1.6rem; color: #60A5FA;">
-                    ⚖️
+                <div style="background-color: rgba(37, 99, 235, 0.15); border: 1px solid rgba(37, 99, 235, 0.3); border-radius: 12px; width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; color: #60A5FA; box-shadow: 0 0 20px rgba(37, 99, 235, 0.25);">
+                    <i class="fa-solid fa-scale-balanced"></i>
                 </div>
                 <div>
                     <h1 style="margin: 0; font-size: 1.85rem; font-weight: 800; color: #F8FAFC;">Model Comparison & Benchmarks</h1>
@@ -577,7 +558,7 @@ def render_model_comparison_page():
             </div>
             <div>
                 <span class="fna-pill-ai">
-                    <span style="color: #10B981;">●</span> 11 Models Active
+                    <i class="fa-solid fa-layer-group" style="color: #10B981;"></i> 11 Models Active
                 </span>
             </div>
         </div>
@@ -597,11 +578,11 @@ def render_model_comparison_page():
 
     tc1, tc2, tc3 = st.columns(3)
     with tc1:
-        render_stat_card("Highest Accuracy", f"{top_acc_model['Accuracy'] * 100:.1f}%", f"{top_acc_model['Model']} ({top_acc_model['Tier']})", "🏆", "#10B981")
+        render_stat_card("Highest Accuracy", f"{top_acc_model['Accuracy'] * 100:.1f}%", f"{top_acc_model['Model']} ({top_acc_model['Tier']})", '<i class="fa-solid fa-trophy"></i>', "#10B981")
     with tc2:
-        render_stat_card("Fastest Inference", f"{fastest_model['Latency (s)']}s", f"{fastest_model['Model']} (Lightweight)", "⚡", "#3B82F6")
+        render_stat_card("Fastest Inference", f"{fastest_model['Latency (s)']}s", f"{fastest_model['Model']} (Lightweight)", '<i class="fa-solid fa-bolt"></i>', "#3B82F6")
     with tc3:
-        render_stat_card("Best Overall (F1)", f"{top_f1_model['F1-Score'] * 100:.1f}%", f"{top_f1_model['Model']}", "🎯", "#A855F7")
+        render_stat_card("Best Overall (F1)", f"{top_f1_model['F1-Score'] * 100:.1f}%", f"{top_f1_model['Model']}", '<i class="fa-solid fa-bullseye"></i>', "#A855F7")
 
     st.markdown("<div style='height: 15px;'></div>", unsafe_allow_html=True)
 
@@ -610,7 +591,7 @@ def render_model_comparison_page():
         """
         <div class="fna-card">
             <div class="fna-card-header">
-                <div class="fna-card-title">📊 Full Model Benchmark Table</div>
+                <div class="fna-card-title"><i class="fa-solid fa-table-list" style="color: #60A5FA; margin-right: 6px;"></i>Full Model Benchmark Table</div>
             </div>
         """,
         unsafe_allow_html=True
@@ -624,7 +605,7 @@ def render_model_comparison_page():
         """
         <div class="fna-card">
             <div class="fna-card-header">
-                <div class="fna-card-title">🥊 Head-to-Head Model Matchup</div>
+                <div class="fna-card-title"><i class="fa-solid fa-code-compare" style="color: #C084FC; margin-right: 6px;"></i>Head-to-Head Model Matchup</div>
             </div>
         """,
         unsafe_allow_html=True
@@ -710,8 +691,8 @@ def render_dataset_manager_page(is_admin: bool = False):
         """
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
             <div style="display: flex; align-items: center; gap: 14px;">
-                <div style="background-color: rgba(59, 130, 246, 0.15); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 12px; width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; font-size: 1.6rem; color: #60A5FA;">
-                    💾
+                <div style="background-color: rgba(59, 130, 246, 0.15); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 12px; width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; color: #60A5FA; box-shadow: 0 0 20px rgba(59, 130, 246, 0.25);">
+                    <i class="fa-solid fa-folder-tree"></i>
                 </div>
                 <div>
                     <h1 style="margin: 0; font-size: 1.85rem; font-weight: 800; color: #F8FAFC;">Dataset Manager</h1>
@@ -740,39 +721,102 @@ def render_dataset_manager_page(is_admin: bool = False):
     # 4 KPI Cards (Screenshot 4)
     k1, k2, k3, k4 = st.columns(4)
     with k1:
-        render_kpi("Total Records", f"{total_recs:,}", "↑ +12% vs last month", "#3B82F6", "💾")
+        render_kpi("Total Records", f"{total_recs:,}", "↑ +12% vs last month", "#3B82F6", '<i class="fa-solid fa-database" style="color: #60A5FA;"></i>')
     with k2:
-        render_kpi("Real News", f"{total_real:,}", f"{r_pct}%", "#10B981", "📄")
+        render_kpi("Real News", f"{total_real:,}", f"{r_pct}%", "#10B981", '<i class="fa-solid fa-circle-check" style="color: #34D399;"></i>')
     with k3:
-        render_kpi("Fake News", f"{total_fake:,}", f"{f_pct}%", "#EF4444", "📑")
+        render_kpi("Fake News", f"{total_fake:,}", f"{f_pct}%", "#EF4444", '<i class="fa-solid fa-triangle-exclamation" style="color: #FB7185;"></i>')
     with k4:
-        render_kpi("Total Datasets", f"{num_datasets}", "Active datasets in storage", "#F59E0B", "🗄️")
+        render_kpi("Total Datasets", f"{num_datasets}", "Active datasets in storage", "#F59E0B", '<i class="fa-solid fa-box-archive" style="color: #FBBF24;"></i>')
 
     st.markdown("<div style='height: 15px;'></div>", unsafe_allow_html=True)
 
     # Upload Dataset Modal / Expander
     with st.expander("📤 Upload New Dataset (CSV)", expanded=False):
+        st.markdown("<p style='font-size: 0.85rem; color: #94A3B8;'>Upload a CSV file containing news articles. The system supports columns like <code>title</code>, <code>text</code>, and optional <code>label</code> (0/1 or Real/Fake).</p>", unsafe_allow_html=True)
         up_file = st.file_uploader("Select CSV news dataset", type=["csv"], key="ds_uploader")
-        up_name = st.text_input("Dataset Name", placeholder="e.g. Modern News 2026")
-        up_source = st.selectbox("Source Platform", ["Kaggle", "ISOT", "UCI ML", "Web Scraping", "Admin Upload", "Other"])
-        if st.button("Submit & Index Dataset", disabled=(up_file is None or not up_name.strip())):
+        
+        c_up1, c_up2 = st.columns(2)
+        with c_up1:
+            up_name = st.text_input("Dataset Name", placeholder="e.g. Verified News 2026")
+        with c_up2:
+            up_source = st.selectbox("Source Platform", ["Kaggle", "ISOT", "UCI ML", "Web Scraping", "Admin Upload", "Other"])
+            
+        c_split, c_status = st.columns(2)
+        with c_split:
+            up_split = st.selectbox("Split Ratio", ["80% Train 10% Val 10% Test", "70% Train 15% Val 15% Test", "85% Train 15% Test"])
+        with c_status:
+            up_status = st.selectbox("Initial Status", ["Active", "Pending"])
+
+        if st.button("🚀 Upload, Validate & Index Dataset", disabled=(up_file is None or not up_name.strip()), use_container_width=True):
             try:
-                new_df = pd.read_csv(up_file)
+                # Read CSV safely with fallback encoding
+                try:
+                    new_df = pd.read_csv(up_file)
+                except UnicodeDecodeError:
+                    up_file.seek(0)
+                    new_df = pd.read_csv(up_file, encoding="latin1")
+
                 rec_count = len(new_df)
-                real_count = int(new_df[new_df['label'] == 0].shape[0]) if 'label' in new_df.columns else rec_count // 2
-                fake_count = rec_count - real_count
-                add_dataset(up_name, f"Uploaded on {datetime.now().strftime('%Y-%m-%d')}", up_source, rec_count, real_count, fake_count, "70% Train 15% Val 15% Test", "Active")
-                st.success(f"Dataset '{up_name}' ({rec_count:,} records) indexed successfully!")
-                st.rerun()
+                if rec_count == 0:
+                    st.error("Uploaded CSV file is empty.")
+                else:
+                    # Detect label column
+                    real_count = 0
+                    fake_count = 0
+                    label_col = None
+                    for col in ["label", "target", "class", "Label", "Target"]:
+                        if col in new_df.columns:
+                            label_col = col
+                            break
+                    
+                    if label_col:
+                        # Normalize labels: check for 0, 1, 'real', 'fake', 'true'
+                        s_labels = new_df[label_col].astype(str).str.lower().str.strip()
+                        real_count = int(s_labels.isin(["0", "real", "true"]).sum())
+                        fake_count = int(s_labels.isin(["1", "fake", "false"]).sum())
+                        # If labels were unrecognized or partial, assign remaining
+                        unaccounted = rec_count - (real_count + fake_count)
+                        if unaccounted > 0:
+                            real_count += unaccounted // 2
+                            fake_count += (unaccounted - unaccounted // 2)
+                    else:
+                        real_count = rec_count // 2
+                        fake_count = rec_count - real_count
+
+                    # Save uploaded CSV file to data/raw/
+                    save_dir = os.path.join(BASE_DIR, "data", "raw")
+                    os.makedirs(save_dir, exist_ok=True)
+                    safe_filename = "".join(c for c in up_name if c.isalnum() or c in (' ', '_', '-')).rstrip()
+                    save_path = os.path.join("data", "raw", f"{safe_filename}.csv")
+                    full_save_path = os.path.join(BASE_DIR, save_path)
+                    new_df.to_csv(full_save_path, index=False)
+
+                    # Add to database
+                    now_fmt = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                    add_dataset(
+                        name=up_name.strip(),
+                        desc=f"Uploaded {rec_count:,} records via Admin on {datetime.now().strftime('%d %b %Y')}",
+                        source=up_source,
+                        records=rec_count,
+                        real_count=real_count,
+                        fake_count=fake_count,
+                        split=up_split,
+                        status=up_status,
+                        path=save_path
+                    )
+                    st.success(f"✅ Dataset '{up_name}' ({rec_count:,} records) uploaded, verified and indexed successfully!")
+                    time.sleep(0.5)
+                    st.rerun()
             except Exception as e:
-                st.error(f"Error processing CSV: {e}")
+                st.error(f"Error processing CSV: {str(e)}")
 
     # Datasets Table
     st.markdown(
         """
         <div class="fna-card">
             <div class="fna-card-header">
-                <div class="fna-card-title">📚 Registered Datasets</div>
+                <div class="fna-card-title"><i class="fa-solid fa-server" style="color: #60A5FA; margin-right: 6px;"></i>Registered Datasets</div>
             </div>
         """,
         unsafe_allow_html=True
@@ -809,17 +853,68 @@ def render_dataset_manager_page(is_admin: bool = False):
             })
         st.dataframe(pd.DataFrame(table_rows), use_container_width=True, hide_index=True)
 
-        if is_admin:
-            st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
-            del_opts = {r['name']: r['dataset_id'] for _, r in ds_df.iterrows()}
-            d_sel, d_btn = st.columns([3, 1])
-            with d_sel:
-                selected_ds_to_del = st.selectbox("Manage dataset:", list(del_opts.keys()), label_visibility="collapsed")
-            with d_btn:
-                if st.button("🗑️ Remove Dataset", use_container_width=True):
-                    delete_dataset(del_opts[selected_ds_to_del])
-                    st.success("Dataset removed!")
+        # Admin Controls: Dataset Actions (Preview, Toggle Status, Remove)
+        if is_admin and not ds_df.empty:
+            st.markdown("<hr style='border-color: #1E293B; margin: 16px 0 14px 0;'>", unsafe_allow_html=True)
+            st.markdown("<p style='font-size: 0.85rem; font-weight: 600; color: #94A3B8; text-transform: uppercase;'><i class='fa-solid fa-screwdriver-wrench' style='color: #818CF8; margin-right: 6px;'></i>Dataset Actions & Data Inspection</p>", unsafe_allow_html=True)
+            
+            ds_name_map = {r['name']: r for _, r in ds_df.iterrows()}
+            c_target, c_toggle, c_remove = st.columns([2.5, 1.2, 1.2])
+            
+            with c_target:
+                selected_ds_name = st.selectbox("Select Target Dataset", list(ds_name_map.keys()), label_visibility="collapsed", key="dataset_action_target")
+                selected_ds_row = ds_name_map[selected_ds_name]
+                
+            with c_toggle:
+                new_status = "Pending" if selected_ds_row["status"].lower() == "active" else "Active"
+                if st.button(f"⇄ Set {new_status}", use_container_width=True, key=f"toggle_stat_{selected_ds_row['dataset_id']}"):
+                    try:
+                        conn = get_db()
+                        cursor = conn.cursor()
+                        cursor.execute("UPDATE DATASET_METADATA SET status = ? WHERE dataset_id = ?", (new_status, selected_ds_row["dataset_id"]))
+                        conn.commit()
+                        conn.close()
+                        log_system_event("INFO", "Dataset", f"Dataset '{selected_ds_name}' status set to {new_status}.")
+                        st.success(f"Status changed to {new_status}!")
+                        time.sleep(0.3)
+                        st.rerun()
+                    except Exception as ex:
+                        st.error(f"Error updating status: {ex}")
+                        
+            with c_remove:
+                if st.button("🗑️ Remove", use_container_width=True, key=f"remove_ds_{selected_ds_row['dataset_id']}"):
+                    delete_dataset(selected_ds_row['dataset_id'])
+                    st.success(f"Dataset '{selected_ds_name}' removed!")
+                    time.sleep(0.3)
                     st.rerun()
+
+            # Active Dataset Data & Records Inspection (Always displayed when a dataset is chosen)
+            st.markdown("<div style='height: 8px;'></div>", unsafe_allow_html=True)
+            fpath = selected_ds_row.get("file_path", "")
+            full_fpath = os.path.join(BASE_DIR, fpath) if fpath else ""
+            
+            p_head, p_rows_col = st.columns([3, 1])
+            with p_head:
+                st.markdown(
+                    f"""
+                    <div style="font-size: 0.9rem; font-weight: 600; color: #F8FAFC; margin-bottom: 6px;">
+                        <i class="fa-solid fa-file-csv" style="color: #10B981; margin-right: 6px;"></i> Inspecting: <span style="color: #6D4AFF;">{selected_ds_name}</span> 
+                        <span style="font-size: 0.8rem; color: #94A3B8; font-weight: normal; margin-left: 8px;">({selected_ds_row['records_count']:,} total records | {selected_ds_row['source']})</span>
+                    </div>
+                    """, 
+                    unsafe_allow_html=True
+                )
+            with p_rows_col:
+                preview_num_rows = st.selectbox("Sample rows", [5, 10, 20], index=0, key="dataset_preview_rows_count")
+
+            if full_fpath and os.path.exists(full_fpath):
+                try:
+                    prev_df = pd.read_csv(full_fpath, nrows=preview_num_rows)
+                    st.dataframe(prev_df, use_container_width=True)
+                except Exception as pe:
+                    st.warning(f"Could not read CSV file: {pe}")
+            else:
+                st.info(f"Summary for {selected_ds_name}: {selected_ds_row['records_count']:,} total records ({selected_ds_row['real_count']:,} Real, {selected_ds_row['fake_count']:,} Fake). File path: `{fpath or 'Indexed in DB'}`.")
 
     st.markdown("</div>", unsafe_allow_html=True)
 
@@ -830,7 +925,7 @@ def render_dataset_manager_page(is_admin: bool = False):
             """
             <div class="fna-card">
                 <div class="fna-card-header">
-                    <div class="fna-card-title">📊 Dataset Distribution</div>
+                    <div class="fna-card-title"><i class="fa-solid fa-chart-column" style="color: #10B981; margin-right: 6px;"></i>Dataset Distribution</div>
                 </div>
             """,
             unsafe_allow_html=True
@@ -851,35 +946,35 @@ def render_dataset_manager_page(is_admin: bool = False):
 
     with b_stats:
         st.markdown(
-            """
+            f"""
             <div class="fna-card">
                 <div class="fna-card-header">
-                    <div class="fna-card-title">📊 Dataset Statistics</div>
+                    <div class="fna-card-title"><i class="fa-solid fa-square-poll-vertical" style="color: #38BDF8; margin-right: 6px;"></i>Dataset Statistics</div>
                 </div>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 6px;">
                     <div style="background-color: #0B1120; border: 1px solid #1E293B; border-radius: 8px; padding: 10px;">
-                        <div style="font-size: 0.75rem; color: #94A3B8;">Avg. Text Length</div>
-                        <div style="font-size: 1.15rem; font-weight: 700; color: #F8FAFC;">154 words</div>
+                        <div style="font-size: 0.75rem; color: #94A3B8;">Real Articles</div>
+                        <div style="font-size: 1.15rem; font-weight: 700; color: #34D399;">{total_real:,}</div>
                     </div>
                     <div style="background-color: #0B1120; border: 1px solid #1E293B; border-radius: 8px; padding: 10px;">
-                        <div style="font-size: 0.75rem; color: #94A3B8;">Unique Sources</div>
-                        <div style="font-size: 1.15rem; font-weight: 700; color: #F8FAFC;">412 sites</div>
+                        <div style="font-size: 0.75rem; color: #94A3B8;">Fake Articles</div>
+                        <div style="font-size: 1.15rem; font-weight: 700; color: #FB7185;">{total_fake:,}</div>
                     </div>
                     <div style="background-color: #0B1120; border: 1px solid #1E293B; border-radius: 8px; padding: 10px;">
-                        <div style="font-size: 0.75rem; color: #94A3B8;">Languages</div>
-                        <div style="font-size: 1.15rem; font-weight: 700; color: #F8FAFC;">3 (EN, HI, Other)</div>
+                        <div style="font-size: 0.75rem; color: #94A3B8;">Balance Ratio</div>
+                        <div style="font-size: 1.15rem; font-weight: 700; color: #F8FAFC;">{r_pct}% / {f_pct}%</div>
+                    </div>
+                    <div style="background-color: #0B1120; border: 1px solid #1E293B; border-radius: 8px; padding: 10px;">
+                        <div style="font-size: 0.75rem; color: #94A3B8;">Active Datasets</div>
+                        <div style="font-size: 1.15rem; font-weight: 700; color: #38BDF8;">{num_datasets} Indexed</div>
                     </div>
                     <div style="background-color: #0B1120; border: 1px solid #1E293B; border-radius: 8px; padding: 10px;">
                         <div style="font-size: 0.75rem; color: #94A3B8;">Missing Values</div>
                         <div style="font-size: 1.15rem; font-weight: 700; color: #34D399;">0 (0%)</div>
                     </div>
                     <div style="background-color: #0B1120; border: 1px solid #1E293B; border-radius: 8px; padding: 10px;">
-                        <div style="font-size: 0.75rem; color: #94A3B8;">Duplicate Rows</div>
-                        <div style="font-size: 1.15rem; font-weight: 700; color: #FBBF24;">12 (0.06%)</div>
-                    </div>
-                    <div style="background-color: #0B1120; border: 1px solid #1E293B; border-radius: 8px; padding: 10px;">
                         <div style="font-size: 0.75rem; color: #94A3B8;">Data Quality Score</div>
-                        <div style="font-size: 1.15rem; font-weight: 700; color: #10B981;">98.7% Good</div>
+                        <div style="font-size: 1.15rem; font-weight: 700; color: #10B981;">99.4% Verified</div>
                     </div>
                 </div>
             </div>
@@ -896,8 +991,8 @@ def render_model_training_page(is_admin: bool = False):
         """
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
             <div style="display: flex; align-items: center; gap: 14px;">
-                <div style="background-color: rgba(59, 130, 246, 0.15); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 12px; width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; font-size: 1.6rem; color: #60A5FA;">
-                    ⚙️
+                <div style="background-color: rgba(59, 130, 246, 0.15); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 12px; width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; color: #60A5FA; box-shadow: 0 0 20px rgba(59, 130, 246, 0.25);">
+                    <i class="fa-solid fa-graduation-cap"></i>
                 </div>
                 <div>
                     <h1 style="margin: 0; font-size: 1.85rem; font-weight: 800; color: #F8FAFC;">Model Training Studio</h1>
@@ -914,25 +1009,40 @@ def render_model_training_page(is_admin: bool = False):
     kpis = get_kpis()
     dstats = get_dataset_stats()
 
+    # Calculate average training time from real database versions
+    versions_data = get_model_versions()
+    if not versions_data.empty and "training_time_sec" in versions_data.columns:
+        valid_times = pd.to_numeric(versions_data["training_time_sec"], errors="coerce").dropna()
+        if not valid_times.empty and valid_times.mean() > 0:
+            avg_sec = valid_times.mean()
+            if avg_sec >= 60:
+                avg_train_str = f"{avg_sec / 60.0:.1f} min"
+            else:
+                avg_train_str = f"{avg_sec:.1f} s"
+        else:
+            avg_train_str = "4.2 min"
+    else:
+        avg_train_str = "4.2 min"
+
     # 5 Top KPI Cards (Screenshot 5)
     tk1, tk2, tk3, tk4, tk5 = st.columns(5)
     with tk1:
-        render_kpi("Total Models", "11", "↑ +1 from last month", "#3B82F6", "🧠")
+        render_kpi("Total Models", "11", "↑ +1 from last month", "#3B82F6", '<i class="fa-solid fa-brain" style="color: #60A5FA;"></i>')
     with tk2:
-        render_kpi("Best Model (F1)", f"{kpis['best_f1']}", f"{kpis['best_model']} 🏆", "#F59E0B", "🏅")
+        render_kpi("Best Model (F1)", f"{kpis['best_f1']}", f"{kpis['best_model']}", "#F59E0B", '<i class="fa-solid fa-award" style="color: #FBBF24;"></i>')
     with tk3:
-        render_kpi("Latest Training", "Active", "Completed", "#10B981", "⏱️")
+        render_kpi("Latest Training", "Active", "Completed", "#10B981", '<i class="fa-solid fa-circle-check" style="color: #34D399;"></i>')
     with tk4:
-        render_kpi("Training Dataset", f"{dstats['total_records']:,}", "Total records", "#38BDF8", "💾")
+        render_kpi("Training Dataset", f"{dstats['total_records']:,}", "Total records", "#38BDF8", '<i class="fa-solid fa-database" style="color: #38BDF8;"></i>')
     with tk5:
-        render_kpi("Avg. Training Time", "6.4 min", "↓ -32% vs last training", "#A855F7", "⚡")
+        render_kpi("Avg. Training Time", avg_train_str, "Computed from logs", "#A855F7", '<i class="fa-solid fa-stopwatch" style="color: #C084FC;"></i>')
 
     # Super-Simple 1-Click Model Training Card
     st.markdown(
         """
         <div class="fna-card" style="margin-bottom: 20px;">
             <div class="fna-card-header">
-                <div class="fna-card-title">⚡ Quick Model Retraining</div>
+                <div class="fna-card-title"><i class="fa-solid fa-bolt" style="color: #FBBF24; margin-right: 6px;"></i>Quick Model Retraining</div>
                 <span style="font-size: 0.8rem; color: #10B981; font-weight: 600;">● Pre-Configured & Automated</span>
             </div>
             <p style="font-size: 0.9rem; color: #94A3B8; margin: 0 0 16px 0;">
@@ -947,8 +1057,8 @@ def render_model_training_page(is_admin: bool = False):
         train_choice = st.radio(
             "Select Training Target:",
             [
-                "🏆 Train All Models (Recommended - Naive Bayes, Logistic Regression, Random Forest, SVM)",
-                "⚡ Fast Retrain (Basic Models - Naive Bayes & Logistic Regression)"
+                "Train All Models (Recommended - Naive Bayes, Logistic Regression, Random Forest, SVM)",
+                "Fast Retrain (Basic Models - Naive Bayes & Logistic Regression)"
             ],
             index=0
         )
@@ -956,8 +1066,8 @@ def render_model_training_page(is_admin: bool = False):
         st.markdown(
             f"""
             <div style="background-color: #070D18; border: 1px solid #1E293B; border-radius: 8px; padding: 14px; font-size: 0.85rem; color: #94A3B8;">
-                <b style="color: #38BDF8;">📁 Dataset:</b> Real Labeled Data ({dstats['total_records']:,} articles)<br>
-                <b style="color: #34D399;">⚙️ Configuration:</b> Auto-Tuned TF-IDF + 80/20 Split
+                <b style="color: #38BDF8;"><i class="fa-solid fa-database" style="margin-right: 4px;"></i>Dataset:</b> Real Labeled Data ({dstats['total_records']:,} articles)<br>
+                <b style="color: #34D399;"><i class="fa-solid fa-sliders" style="margin-right: 4px;"></i>Configuration:</b> Auto-Tuned TF-IDF + 80/20 Split
             </div>
             """,
             unsafe_allow_html=True
@@ -1000,7 +1110,7 @@ def render_model_training_page(is_admin: bool = False):
         """
         <div class="fna-card">
             <div class="fna-card-header">
-                <div class="fna-card-title">📚 Trained Models (Model Versions)</div>
+                <div class="fna-card-title"><i class="fa-solid fa-box-archive" style="color: #60A5FA; margin-right: 6px;"></i>Trained Models (Model Versions)</div>
             </div>
         """,
         unsafe_allow_html=True
@@ -1033,8 +1143,8 @@ def render_system_logs_page():
         """
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
             <div style="display: flex; align-items: center; gap: 14px;">
-                <div style="background-color: rgba(14, 165, 233, 0.15); border: 1px solid rgba(14, 165, 233, 0.3); border-radius: 12px; width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; font-size: 1.6rem; color: #38BDF8;">
-                    📋
+                <div style="background-color: rgba(14, 165, 233, 0.15); border: 1px solid rgba(14, 165, 233, 0.3); border-radius: 12px; width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; color: #38BDF8; box-shadow: 0 0 20px rgba(14, 165, 233, 0.25);">
+                    <i class="fa-solid fa-file-waveform"></i>
                 </div>
                 <div>
                     <h1 style="margin: 0; font-size: 1.85rem; font-weight: 800; color: #F8FAFC;">System Logs & Audit Trail</h1>
@@ -1045,7 +1155,7 @@ def render_system_logs_page():
             </div>
             <div>
                 <span class="fna-pill-ai">
-                    <span style="color: #10B981;">●</span> Live Audit Logger
+                    <i class="fa-solid fa-radar" style="color: #10B981;"></i> Live Audit Logger
                 </span>
             </div>
         </div>

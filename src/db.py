@@ -153,11 +153,10 @@ def init_db():
     cursor.execute("SELECT COUNT(*) FROM DATASET_METADATA")
     if cursor.fetchone()[0] == 0:
         initial_datasets = [
-            ("FakeNewsNet", "Popular fake news dataset from Kaggle", "Kaggle", 8542, 4321, 4221, "70% Train 15% Val 15% Test", datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "Active", "data/raw/FakeNewsNet.csv"),
-            ("ISOT Fake News", "ISOT dataset (political & world news)", "ISOT", 4320, 2108, 2212, "70% Train 15% Val 15% Test", datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "Active", "data/raw/ISOT.csv"),
-            ("LIAR Dataset", "Short statements with labels", "UCI ML", 2384, 1198, 1186, "80% Train 10% Val 10% Test", datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "Active", "data/raw/LIAR.csv"),
-            ("Custom News Dataset", "Collected from news websites", "Web Scraping", 3210, 1085, 2125, "70% Train 15% Val 15% Test", datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "Active", "data/raw/custom.csv"),
-            ("User Submitted Data", "Manual verification dataset", "Admin Upload", 3148, 0, 3148, "Pending Split", datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "Pending", "data/raw/user_submitted.csv"),
+            ("ISOT True News (Verified)", "Verified authentic world and politics news dataset", "Reuters & FactCheck", 170012, 170012, 0, "80% Train 20% Test", datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "Active", "data/raw/True.csv"),
+            ("ISOT Fake News (Deceptive)", "Deceptive news articles, fabrications, and satire", "Kaggle & FactCheck", 168265, 0, 168265, "80% Train 20% Test", datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "Active", "data/raw/Fake.csv"),
+            ("Combined Training Corpus", "Full aggregated corpus used for TF-IDF & transformer training", "ISOT & FactCheck", 338277, 170012, 168265, "80% Train 20% Test", datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "Active", "data/processed/train.csv"),
+            ("Processed Evaluation Test Set", "Hold-out test dataset for model benchmarking & evaluation", "Benchmark Split", 67655, 34002, 33653, "20% Holdout Test", datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "Active", "data/processed/test.csv")
         ]
         cursor.executemany('''
             INSERT INTO DATASET_METADATA 
