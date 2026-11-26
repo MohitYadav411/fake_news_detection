@@ -1,8 +1,47 @@
 import sqlite3
 import os
+import hashlib
 from datetime import datetime
 
 DB_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data', 'app.db')
+
+def hash_password(password: str) -> str:
+    """Returns SHA-256 hash of password."""
+    return hashlib.sha256(password.encode('utf-8')).hexdigest()
+
+def verify_password(password: str, stored_hash: str) -> bool:
+    """Verifies a plain password against the stored hash or fallback default."""
+    if not stored_hash:
+        return password == "admin123"
+    return hash_password(password) == stored_hash
+
+def get_admin_password_hash() -> str:
+    """Retrieves current admin password hash from database."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("SELECT password_hash FROM USER WHERE username = 'admin'")
+        row = cursor.fetchone()
+        if row and row[0]:
+            return row[0]
+        return hash_password("admin123")
+    finally:
+        conn.close()
+
+def update_admin_password(new_password: str) -> bool:
+    """Updates admin password hash in database."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    try:
+        new_hash = hash_password(new_password)
+        cursor.execute("UPDATE USER SET password_hash = ? WHERE username = 'admin'", (new_hash,))
+        conn.commit()
+        return True
+    except Exception as e:
+        print(f"Error updating admin password: {e}")
+        return False
+    finally:
+        conn.close()
 
 def get_connection():
     """Returns a connection to the SQLite database."""
@@ -20,14 +59,26 @@ def init_db():
         CREATE TABLE IF NOT EXISTS USER (
             user_id INTEGER PRIMARY KEY AUTOINCREMENT,
             username TEXT NOT NULL,
-            role TEXT NOT NULL
+            role TEXT NOT NULL,
+            password_hash TEXT
         )
     ''')
     
-    # Insert a default admin user if not exists
+    # Migration check for password_hash column in existing USER table
+    cursor.execute("PRAGMA table_info(USER)")
+    user_cols = [row[1] for row in cursor.fetchall()]
+    if 'password_hash' not in user_cols:
+        cursor.execute("ALTER TABLE USER ADD COLUMN password_hash TEXT")
+    
+    # Insert or update default admin user if not exists
     cursor.execute("SELECT COUNT(*) FROM USER WHERE username = 'admin'")
     if cursor.fetchone()[0] == 0:
-        cursor.execute("INSERT INTO USER (username, role) VALUES ('admin', 'admin')")
+        cursor.execute("INSERT INTO USER (username, role, password_hash) VALUES ('admin', 'admin', ?)", (hash_password("admin123"),))
+    else:
+        cursor.execute("SELECT password_hash FROM USER WHERE username = 'admin'")
+        row = cursor.fetchone()
+        if not row or not row[0]:
+            cursor.execute("UPDATE USER SET password_hash = ? WHERE username = 'admin'", (hash_password("admin123"),))
 
     # NEWS_QUERY table
     cursor.execute('''

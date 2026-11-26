@@ -18,7 +18,7 @@ from datetime import datetime
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(os.path.join(BASE_DIR, "src"))
 
-from history import get_kpis, get_history, get_dataset_stats, update_review_status, export_history
+from history import get_kpis, get_history, get_dataset_stats, update_review_status, update_prediction_label, export_history
 from ui_theme import inject_theme, render_kpi, render_badge, render_stat_card, render_confidence_pill
 from analytics import (
     EVAL_MODELS, MODEL_TIERS, LATENCY_ESTIMATES,
@@ -421,35 +421,31 @@ def render_prediction_history_page(is_admin: bool = False):
         unsafe_allow_html=True
     )
 
-    # 4 Top KPI Cards (Screenshot 2)
+    # 3 Top KPI Cards (Screenshot 2)
     kpis = get_kpis()
     tot = kpis["total"]
     r_count = kpis["real"]
     f_count = kpis["fake"]
-    u_count = kpis["unverified"]
     r_pct = round((r_count / tot) * 100, 1) if tot > 0 else 0.0
     f_pct = round((f_count / tot) * 100, 1) if tot > 0 else 0.0
-    u_pct = round((u_count / tot) * 100, 1) if tot > 0 else 0.0
 
-    k1, k2, k3, k4 = st.columns(4)
+    k1, k2, k3 = st.columns(3)
     with k1:
         render_kpi("Total Predictions", f"{tot:,}", "Live database records", "#3B82F6", '<i class="fa-solid fa-database" style="color: #60A5FA;"></i>')
     with k2:
         render_kpi("Real News", f"{r_count:,}", f"{r_pct}% of total", "#10B981", '<i class="fa-solid fa-circle-check" style="color: #34D399;"></i>')
     with k3:
         render_kpi("Fake News", f"{f_count:,}", f"{f_pct}% of total", "#EF4444", '<i class="fa-solid fa-triangle-exclamation" style="color: #FB7185;"></i>')
-    with k4:
-        render_kpi("Unverified News", f"{u_count:,}", f"{u_pct}% of total", "#F59E0B", '<i class="fa-solid fa-circle-question" style="color: #FBBF24;"></i>')
 
     st.markdown("<div style='height: 15px;'></div>", unsafe_allow_html=True)
 
     # Filter Bar (Screenshot 2)
     st.markdown('<div class="fna-card">', unsafe_allow_html=True)
-    f_col1, f_col2, f_col3, f_col4, f_col5 = st.columns([2.5, 1.2, 1.2, 1.2, 0.8])
+    f_col1, f_col2, f_col3, f_col4, f_col5 = st.columns([2.2, 1.2, 1.2, 1.2, 0.8])
     with f_col1:
         search_query = st.text_input("Search", placeholder="🔍 Search news text, source, or ID...", label_visibility="collapsed")
     with f_col2:
-        result_filter = st.selectbox("Result Type", ["All", "Real", "Fake", "Unverified"], label_visibility="collapsed")
+        result_filter = st.selectbox("Result Type", ["All", "Real", "Fake"], label_visibility="collapsed")
     with f_col3:
         model_filter = st.selectbox("Model", ["All Models"] + [m.replace('_', ' ').title() for m in EVAL_MODELS], label_visibility="collapsed")
     with f_col4:
@@ -457,8 +453,18 @@ def render_prediction_history_page(is_admin: bool = False):
     with f_col5:
         reset_btn = st.button("🔄 Reset", use_container_width=True)
 
+    # Admin Quick Filter: Low Confidence / Borderline Claims & Review Queue Mode
+    borderline_only = False
+    hide_verified = False
+    if is_admin:
+        col_bf1, col_bf2 = st.columns([1.5, 1.5])
+        with col_bf1:
+            borderline_only = st.checkbox("⚠️ Show Borderline Claims (< 65% Confidence)", value=False)
+        with col_bf2:
+            hide_verified = st.checkbox("🎯 Active Review Queue (Hide already-reviewed items)", value=True, help="Automatically removes items from the list as soon as you review or verify them")
+
     # Fetch History from DB
-    hist_df = get_history(limit=200)
+    hist_df = get_history(limit=250)
 
     if not hist_df.empty:
         filtered = hist_df.copy()
@@ -472,6 +478,10 @@ def render_prediction_history_page(is_admin: bool = False):
         if model_filter != "All Models":
             clean_m = model_filter.lower().replace(" ", "_")
             filtered = filtered[filtered["model_name"].str.lower() == clean_m]
+        if borderline_only:
+            filtered = filtered[filtered["confidence"] < 65.0]
+        if hide_verified:
+            filtered = filtered[filtered["status"].astype(str).str.strip().str.lower() != "admin verified"]
 
         # Top Action Bar: Export
         exp_col1, exp_col2 = st.columns([3, 1])
@@ -484,7 +494,7 @@ def render_prediction_history_page(is_admin: bool = False):
 
         st.markdown(f"<div style='font-size: 0.95rem; font-weight: 600; color: #F8FAFC; margin-bottom: 12px;'><i class='fa-solid fa-list-ul' style='color: #818CF8; margin-right: 6px;'></i>Prediction History (Showing {len(filtered)} records)</div>", unsafe_allow_html=True)
 
-        # Pagination Logic (Screenshot 2: Showing 1 to 10 of ...)
+        # Pagination Logic (Showing 1 to 10 of ...)
         page_size = 10
         total_items = len(filtered)
         total_pages = max((total_items + page_size - 1) // page_size, 1)
@@ -502,18 +512,54 @@ def render_prediction_history_page(is_admin: bool = False):
         for idx, (_, row) in enumerate(page_df.iterrows(), start=start_idx + 1):
             short_txt = str(row["raw_text"])[:50] + "..." if len(str(row["raw_text"])) > 50 else str(row["raw_text"])
             conf_val = round(float(row["confidence"]), 1)
-            display_rows.append({
+            item_data = {
                 "#": idx,
                 "News Text (Short)": short_txt,
                 "Result": row["predicted_label"],
                 "Confidence": f"{conf_val}%",
                 "Model": str(row["model_name"]).replace('_', ' ').title(),
                 "Source": "News Website" if "http" not in str(row["raw_text"]) else "Online URL",
-                "Date & Time": str(row["logged_at"])[:16],
-                "ID": row["prediction_code"]
-            })
+            }
+            if is_admin:
+                item_data["Status"] = str(row.get("status", "Reviewed"))
+            item_data["Date & Time"] = str(row["logged_at"])[:16]
+            item_data["ID"] = row["prediction_code"]
+            display_rows.append(item_data)
             
         st.dataframe(pd.DataFrame(display_rows), use_container_width=True, hide_index=True)
+
+        # Admin Human-in-the-Loop Override & Verification Controls
+        if is_admin and not page_df.empty:
+            st.markdown("<hr style='border-color: #1E293B; margin: 16px 0 12px 0;'>", unsafe_allow_html=True)
+            st.markdown("<p style='font-size: 0.88rem; font-weight: 700; color: #818CF8; margin-bottom: 8px;'><i class='fa-solid fa-user-shield' style='margin-right: 6px;'></i>Administrator Review & Label Override</p>", unsafe_allow_html=True)
+            
+            ov_col1, ov_col2, ov_col3 = st.columns([1.8, 1.2, 1])
+            with ov_col1:
+                # Select a record from current page to inspect/override
+                record_options = {
+                    f"{r['prediction_code']} | {str(r['raw_text'])[:35]}... ({r['predicted_label']} - {round(float(r['confidence']), 1)}%)": r["result_id"]
+                    for _, r in page_df.iterrows()
+                }
+                selected_label = st.selectbox("Select Prediction to Override", list(record_options.keys()), label_visibility="collapsed")
+                selected_id = record_options[selected_label]
+            with ov_col2:
+                new_verdict = st.selectbox("New Corrected Verdict", ["Real", "Fake"], label_visibility="collapsed")
+            with ov_col3:
+                btn_c1, btn_c2 = st.columns(2)
+                with btn_c1:
+                    if st.button("Mark Reviewed", use_container_width=True, help="Confirms current verdict and removes it from the review queue"):
+                        ok = update_review_status(selected_id, "Admin Verified")
+                        if ok:
+                            st.success("Claim marked as reviewed and removed from queue!")
+                            st.rerun()
+                with btn_c2:
+                    if st.button("Override", type="primary", use_container_width=True, help="Changes verdict and removes it from the review queue"):
+                        ok = update_prediction_label(selected_id, new_verdict, new_status="Admin Verified")
+                        if ok:
+                            st.success(f"Updated to '{new_verdict}' and removed from queue!")
+                            st.rerun()
+                        else:
+                            st.error("Failed to update prediction in database.")
 
         # Pagination Navigation Buttons
         st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
@@ -656,30 +702,33 @@ def render_model_comparison_page():
         )
 
     # Bar chart comparing them
-    fig, ax = plt.subplots(figsize=(7, 3), facecolor="#0F172A")
-    ax.set_facecolor("#0F172A")
-    categories = ['Accuracy', 'Precision', 'Recall', 'F1-Score']
-    vals_a = [mA_row['Accuracy'], mA_row['Precision'], mA_row['Recall'], mA_row['F1-Score']]
-    vals_b = [mB_row['Accuracy'], mB_row['Precision'], mB_row['Recall'], mB_row['F1-Score']]
-    
-    x = np.arange(len(categories))
-    width = 0.35
-    ax.bar(x - width/2, vals_a, width, label=model_a, color="#38BDF8", edgecolor="#1E293B")
-    ax.bar(x + width/2, vals_b, width, label=model_b, color="#A855F7", edgecolor="#1E293B")
-    
-    ax.set_ylabel('Score', color="#94A3B8")
-    ax.set_xticks(x)
-    ax.set_xticklabels(categories, color="#CBD5E1")
-    ax.tick_params(colors="#94A3B8")
-    ax.set_ylim(0, 1.1)
-    ax.legend(facecolor="#0F172A", edgecolor="#1E293B", labelcolor="#F8FAFC")
-    ax.spines['top'].set_visible(False)
-    ax.spines['right'].set_visible(False)
-    ax.spines['left'].set_color('#1E293B')
-    ax.spines['bottom'].set_color('#1E293B')
-    ax.grid(axis='y', color="#1E293B", linestyle='--', alpha=0.5)
-    st.pyplot(fig)
-    plt.close(fig)
+    col_chart_wrap, _ = st.columns([1, 0.05])
+    with col_chart_wrap:
+        fig, ax = plt.subplots(figsize=(6.5, 2.6), facecolor="#0F172A")
+        ax.set_facecolor("#0F172A")
+        categories = ['Accuracy', 'Precision', 'Recall', 'F1-Score']
+        vals_a = [mA_row['Accuracy'], mA_row['Precision'], mA_row['Recall'], mA_row['F1-Score']]
+        vals_b = [mB_row['Accuracy'], mB_row['Precision'], mB_row['Recall'], mB_row['F1-Score']]
+        
+        x = np.arange(len(categories))
+        width = 0.32
+        ax.bar(x - width/2, vals_a, width, label=model_a, color="#38BDF8", edgecolor="#1E293B")
+        ax.bar(x + width/2, vals_b, width, label=model_b, color="#A855F7", edgecolor="#1E293B")
+        
+        ax.set_ylabel('Score', color="#94A3B8", fontsize=8.5)
+        ax.set_xticks(x)
+        ax.set_xticklabels(categories, color="#CBD5E1", fontsize=8.5)
+        ax.tick_params(colors="#94A3B8", labelsize=8.5)
+        ax.set_ylim(0, 1.1)
+        ax.legend(facecolor="#0F172A", edgecolor="#1E293B", labelcolor="#F8FAFC", fontsize=8.5)
+        ax.spines['top'].set_visible(False)
+        ax.spines['right'].set_visible(False)
+        ax.spines['left'].set_color('#1E293B')
+        ax.spines['bottom'].set_color('#1E293B')
+        ax.grid(axis='y', color="#1E293B", linestyle='--', alpha=0.5)
+        plt.tight_layout()
+        st.pyplot(fig, use_container_width=False)
+        plt.close(fig)
     st.markdown("</div>", unsafe_allow_html=True)
 
 

@@ -16,8 +16,6 @@ def log_query(raw_text: str, cleaned_text: str, model_name: str, label: str, con
     
     try:
         now = datetime.utcnow()
-        prediction_code = f"PN-{now.strftime('%Y%m%d')}-{int(now.timestamp()) % 10000:04d}"
-        
         # 1. Ensure model exists in MODEL table or fetch its ID
         cursor.execute("SELECT model_id FROM MODEL WHERE name = ?", (model_name,))
         model_row = cursor.fetchone()
@@ -26,13 +24,14 @@ def log_query(raw_text: str, cleaned_text: str, model_name: str, label: str, con
         else:
             cursor.execute("INSERT INTO MODEL (name, tier) VALUES (?, ?)", (model_name, 'unknown'))
             model_id = cursor.lastrowid
-            
+
         # 2. Insert into NEWS_QUERY
         cursor.execute(
             "INSERT INTO NEWS_QUERY (raw_text, cleaned_text, submitted_at) VALUES (?, ?, ?)",
             (raw_text, cleaned_text, now)
         )
         query_id = cursor.lastrowid
+        prediction_code = f"#{query_id}"
         
         # 3. Insert into PREDICTION_RESULT
         cursor.execute(
@@ -67,7 +66,7 @@ def get_history(limit: int = 100) -> pd.DataFrame:
     query = '''
         SELECT 
             pr.result_id,
-            COALESCE(pr.prediction_code, 'PN-' || pr.result_id) AS prediction_code,
+            COALESCE(pr.prediction_code, '#' || pr.result_id) AS prediction_code,
             nq.raw_text,
             pr.predicted_label,
             pr.confidence,
@@ -197,6 +196,24 @@ def get_dataset_stats():
         print(f"Error calculating dataset stats: {e}")
 
     return stats
+
+def update_prediction_label(result_id: int, new_label: str, new_status: str = "Admin Verified") -> bool:
+    """Allows an administrator to manually override or correct a prediction label."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute(
+            "UPDATE PREDICTION_RESULT SET predicted_label = ?, status = ? WHERE result_id = ?",
+            (new_label, new_status, result_id)
+        )
+        conn.commit()
+        return True
+    except Exception as e:
+        conn.rollback()
+        print(f"Error updating prediction label: {e}")
+        return False
+    finally:
+        conn.close()
 
 def update_review_status(result_id: int, status: str = "Reviewed") -> bool:
     """Updates the status of a prediction record."""

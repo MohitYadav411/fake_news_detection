@@ -69,6 +69,22 @@ def lemmatize(tokens: list[str]) -> list[str]:
     """
     return [lemmatizer.lemmatize(word) for word in tokens]
 
+def is_english_text(raw_text: str, min_ascii_ratio: float = 0.70) -> bool:
+    """
+    Checks whether the input text appears to be English.
+    Requires at least a threshold ratio of ASCII alphabetic characters among all alphabet characters.
+    """
+    if not isinstance(raw_text, str) or not raw_text.strip():
+        return True
+    
+    alpha_chars = [ch for ch in raw_text if ch.isalpha()]
+    if not alpha_chars:
+        return True
+        
+    ascii_alpha = [ch for ch in alpha_chars if ord(ch) < 128]
+    ratio = len(ascii_alpha) / len(alpha_chars)
+    return ratio >= min_ascii_ratio
+
 def preprocess(raw_text: str) -> str:
     """
     Single public entry point chaining the preprocessing steps.

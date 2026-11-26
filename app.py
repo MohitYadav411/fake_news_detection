@@ -14,7 +14,7 @@ import pandas as pd
 sys.path.append(os.path.join(os.path.dirname(__file__), "src"))
 from predict import predict
 from history import log_query, get_history, export_history
-from preprocessing import preprocess
+from preprocessing import preprocess, is_english_text
 from db import init_db
 from ui_theme import inject_theme, render_badge
 from analytics import log_system_event
@@ -61,7 +61,7 @@ def main():
                 </div>
                 <div>
                     <h3 style="margin: 0; font-size: 1.3rem; font-weight: 800; background: linear-gradient(135deg, #FFFFFF 0%, #CBD5E1 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">FakeNewsAI</h3>
-                    <div style="font-size: 0.78rem; color: #818CF8; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase;">Detection Studio</div>
+                    <div style="font-size: 0.78rem; color: #818CF8; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase;">News Detection</div>
                 </div>
             </div>
             """, 
@@ -73,8 +73,7 @@ def main():
         nav_items = [
             ("Home (Check News)", "Check News", ":material/search_check:"),
             ("Prediction History", "Prediction History", ":material/history:"),
-            ("Model Comparison", "Model Comparison", ":material/balance:"),
-            ("Model Insights", "Model Insights", ":material/insights:")
+            ("Model Comparison", "Model Comparison", ":material/balance:")
         ]
         
         if "app_nav" not in st.session_state:
@@ -157,7 +156,7 @@ def main():
         with col_meta:
             st.markdown(
                 f"<div style='font-size: 0.85rem; color: #64748B; padding-top: 10px;'>"
-                f"Characters: <b style='color: #94A3B8;'>{char_count}</b> &nbsp;|&nbsp; Supports English and multilingual news"
+                f"Characters: <b style='color: #94A3B8;'>{char_count}</b> &nbsp;|&nbsp; Language: <b style='color: #818CF8;'>English (Required)</b>"
                 f"</div>",
                 unsafe_allow_html=True
             )
@@ -173,127 +172,131 @@ def main():
                     label_visibility="collapsed"
                 )
             with col_btn:
-                check_btn = st.button("🔍 Check News", use_container_width=True, disabled=(char_count == 0))
+                check_btn = st.button("Check News", use_container_width=True, disabled=(char_count == 0))
 
         st.markdown('</div>', unsafe_allow_html=True)
 
         # Prediction and Analysis Logic
         if check_btn and raw_text.strip():
-            models_to_run = TIER_OPTIONS[selected_tier]
-            is_ensemble = "Ensemble" in selected_tier
-            
-            with st.spinner("Analyzing text using trained models..."):
-                start_time = time.time()
-                cleaned_text = preprocess(raw_text)
-                results = []
+            if not is_english_text(raw_text):
+                st.error("⚠️ Unsupported Language: This system is trained exclusively on English news. Please enter or translate your article into English for analysis.")
+                st.info("💡 Note: Processing non-English news directly causes out-of-vocabulary zero vectors, resulting in unreliable predictions.")
+            else:
+                models_to_run = TIER_OPTIONS[selected_tier]
+                is_ensemble = "Ensemble" in selected_tier
                 
-                real_count = 0
-                fake_count = 0
-                
-                for m_name in models_to_run:
-                    m_start = time.time()
-                    res = predict(raw_text, m_name)
-                    m_dur = round(time.time() - m_start, 2)
-                    if "error" not in res:
-                        label = res["label"]
-                        conf = res["confidence"]
-                        if label == "Real":
-                            real_count += 1
-                        else:
-                            fake_count += 1
-                        results.append({
-                            "model": m_name,
-                            "label": label,
-                            "confidence": conf
-                        })
-                        # Live dynamic status: borderline confidence (< 65%) marked as Pending review
-                        initial_status = "Pending" if conf < 65.0 else "Reviewed"
-                        log_query(raw_text, cleaned_text, m_name, label, conf, inference_time=max(m_dur, 0.15), status=initial_status)
-                        log_system_event("INFO", "Predictor", f"{m_name.replace('_', ' ').title()} classified query as {label} ({conf}%)")
-                
-                inference_sec = round(time.time() - start_time, 2)
-                
-            # Render Results Card
-            if results:
-                st.markdown('<div class="fna-card">', unsafe_allow_html=True)
-                
-                if is_ensemble:
-                    final_label = "Real" if real_count >= fake_count else "Fake"
-                    vote_ratio = f"{max(real_count, fake_count)} of {len(results)}"
-                    badge_style = "badge-real" if final_label == "Real" else "badge-fake"
-                    badge_icon = '<i class="fa-solid fa-circle-check"></i>' if final_label == "Real" else '<i class="fa-solid fa-triangle-exclamation"></i>'
-                    avg_conf = round(sum(r["confidence"] for r in results) / len(results), 1)
+                with st.spinner("Analyzing text using trained models..."):
+                    start_time = time.time()
+                    cleaned_text = preprocess(raw_text)
+                    results = []
+                    
+                    real_count = 0
+                    fake_count = 0
+                    
+                    for m_name in models_to_run:
+                        m_start = time.time()
+                        res = predict(raw_text, m_name)
+                        m_dur = round(time.time() - m_start, 2)
+                        if "error" not in res:
+                            label = res["label"]
+                            conf = res["confidence"]
+                            if label == "Real":
+                                real_count += 1
+                            else:
+                                fake_count += 1
+                            results.append({
+                                "model": m_name,
+                                "label": label,
+                                "confidence": conf
+                            })
+                            # Live dynamic status: borderline confidence (< 65%) marked as Pending review
+                            initial_status = "Pending" if conf < 65.0 else "Reviewed"
+                            log_query(raw_text, cleaned_text, m_name, label, conf, inference_time=max(m_dur, 0.15), status=initial_status)
+                            log_system_event("INFO", "Predictor", f"{m_name.replace('_', ' ').title()} classified query as {label} ({conf}%)")
+                    
+                    inference_sec = round(time.time() - start_time, 2)
+                    
+                # Render Results Card
+                if results:
+                    st.markdown('<div class="fna-card">', unsafe_allow_html=True)
+                    
+                    if is_ensemble:
+                        final_label = "Real" if real_count >= fake_count else "Fake"
+                        vote_ratio = f"{max(real_count, fake_count)} of {len(results)}"
+                        badge_style = "badge-real" if final_label == "Real" else "badge-fake"
+                        badge_icon = '<i class="fa-solid fa-circle-check"></i>' if final_label == "Real" else '<i class="fa-solid fa-triangle-exclamation"></i>'
+                        avg_conf = round(sum(r["confidence"] for r in results) / len(results), 1)
 
-                    st.markdown(
-                        f"""
-                        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; border-bottom: 1px solid #1E293B; padding-bottom: 12px; margin-bottom: 16px;">
-                            <div style="min-width: 240px; flex: 1 1 280px;">
-                                <span class="fna-badge {badge_style}" style="font-size: 1.05rem; padding: 6px 14px; max-width: 100%; word-break: break-word;">
-                                    {badge_icon} FINAL VERDICT: {final_label.upper()} NEWS
-                                </span>
-                                <div style="font-size: 0.82rem; color: #94A3B8; margin-top: 8px; line-height: 1.5;">
-                                    <i class="fa-solid fa-users-viewfinder" style="margin-right: 4px;"></i> Ensemble Consensus: <b>{vote_ratio} models agree</b><br>
-                                    <i class="fa-solid fa-stopwatch" style="margin-right: 4px;"></i> Inference: <b>{inference_sec}s</b>
+                        st.markdown(
+                            f"""
+                            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; border-bottom: 1px solid #1E293B; padding-bottom: 12px; margin-bottom: 16px;">
+                                <div style="min-width: 240px; flex: 1 1 280px;">
+                                    <span class="fna-badge {badge_style}" style="font-size: 1.05rem; padding: 6px 14px; max-width: 100%; word-break: break-word;">
+                                        {badge_icon} FINAL VERDICT: {final_label.upper()} NEWS
+                                    </span>
+                                    <div style="font-size: 0.82rem; color: #94A3B8; margin-top: 8px; line-height: 1.5;">
+                                        <i class="fa-solid fa-users-viewfinder" style="margin-right: 4px;"></i> Ensemble Consensus: <b>{vote_ratio} models agree</b><br>
+                                        <i class="fa-solid fa-stopwatch" style="margin-right: 4px;"></i> Inference: <b>{inference_sec}s</b>
+                                    </div>
+                                </div>
+                                <div style="text-align: right; min-width: 110px;">
+                                    <div style="font-size: 0.78rem; color: #64748B;">Average Confidence</div>
+                                    <div style="font-size: 1.45rem; font-weight: 700; color: #F8FAFC;">{avg_conf}%</div>
                                 </div>
                             </div>
-                            <div style="text-align: right; min-width: 110px;">
-                                <div style="font-size: 0.78rem; color: #64748B;">Average Confidence</div>
-                                <div style="font-size: 1.45rem; font-weight: 700; color: #F8FAFC;">{avg_conf}%</div>
-                            </div>
-                        </div>
-                        """,
-                        unsafe_allow_html=True
-                    )
-                    
-                    st.progress(min(avg_conf / 100.0, 1.0))
-                    
-                    st.markdown("<p style='font-weight: 600; font-size: 0.95rem; margin-top: 15px; color: #F8FAFC;'><i class='fa-solid fa-layer-group' style='margin-right: 6px;'></i>Individual Model Predictions:</p>", unsafe_allow_html=True)
-                    df_res = pd.DataFrame([
-                        {
-                            "Model": r["model"].replace('_', ' ').title(),
-                            "Prediction": r["label"],
-                            "Confidence": f"{r['confidence']}%"
-                        }
-                        for r in results
-                    ])
-                    st.dataframe(df_res, use_container_width=True)
+                            """,
+                            unsafe_allow_html=True
+                        )
+                        
+                        st.progress(min(avg_conf / 100.0, 1.0))
+                        
+                        st.markdown("<p style='font-weight: 600; font-size: 0.95rem; margin-top: 15px; color: #F8FAFC;'><i class='fa-solid fa-layer-group' style='margin-right: 6px;'></i>Individual Model Predictions:</p>", unsafe_allow_html=True)
+                        df_res = pd.DataFrame([
+                            {
+                                "Model": r["model"].replace('_', ' ').title(),
+                                "Prediction": r["label"],
+                                "Confidence": f"{r['confidence']}%"
+                            }
+                            for r in results
+                        ])
+                        st.dataframe(df_res, use_container_width=True)
 
-                else:
-                    st.markdown(
-                        f"""
-                        <div style="border-bottom: 1px solid #1E293B; padding-bottom: 10px; margin-bottom: 16px;">
-                            <h3 style="margin: 0; font-size: 1.1rem; color: #F8FAFC;"><i class="fa-solid fa-chart-simple" style="margin-right: 6px;"></i>Model Prediction Results ({len(results)} Models)</h3>
-                            <div style="font-size: 0.8rem; color: #64748B;">Total processing time: {inference_sec}s</div>
-                        </div>
-                        """, 
-                        unsafe_allow_html=True
-                    )
+                    else:
+                        st.markdown(
+                            f"""
+                            <div style="border-bottom: 1px solid #1E293B; padding-bottom: 10px; margin-bottom: 16px;">
+                                <h3 style="margin: 0; font-size: 1.1rem; color: #F8FAFC;"><i class="fa-solid fa-chart-simple" style="margin-right: 6px;"></i>Model Prediction Results ({len(results)} Models)</h3>
+                                <div style="font-size: 0.8rem; color: #64748B;">Total processing time: {inference_sec}s</div>
+                            </div>
+                            """, 
+                            unsafe_allow_html=True
+                        )
+                        
+                        cols = st.columns(len(results))
+                        for idx, r in enumerate(results):
+                            with cols[idx]:
+                                badge_style = "badge-real" if r["label"] == "Real" else "badge-fake"
+                                badge_icon = '<i class="fa-solid fa-circle-check"></i>' if r["label"] == "Real" else '<i class="fa-solid fa-circle-xmark"></i>'
+                                st.markdown(
+                                    f"""
+                                    <div style="background-color: #0B1120; border: 1px solid #1E293B; border-radius: 8px; padding: 12px; text-align: center;">
+                                        <div style="font-size: 0.85rem; font-weight: 600; color: #94A3B8; margin-bottom: 8px;">
+                                            {r["model"].replace('_', ' ').title()}
+                                        </div>
+                                        <div style="margin-bottom: 8px;">
+                                            <span class="fna-badge {badge_style}">
+                                                {badge_icon} {r["label"]}
+                                            </span>
+                                        </div>
+                                        <div style="font-size: 0.8rem; color: #64748B;">Confidence: <b style="color: #F8FAFC;">{r["confidence"]}%</b></div>
+                                    </div>
+                                    """,
+                                    unsafe_allow_html=True
+                                )
+                                st.progress(min(r["confidence"] / 100.0, 1.0))
                     
-                    cols = st.columns(len(results))
-                    for idx, r in enumerate(results):
-                        with cols[idx]:
-                            badge_style = "badge-real" if r["label"] == "Real" else "badge-fake"
-                            badge_icon = '<i class="fa-solid fa-circle-check"></i>' if r["label"] == "Real" else '<i class="fa-solid fa-circle-xmark"></i>'
-                            st.markdown(
-                                f"""
-                                <div style="background-color: #0B1120; border: 1px solid #1E293B; border-radius: 8px; padding: 12px; text-align: center;">
-                                    <div style="font-size: 0.85rem; font-weight: 600; color: #94A3B8; margin-bottom: 8px;">
-                                        {r["model"].replace('_', ' ').title()}
-                                    </div>
-                                    <div style="margin-bottom: 8px;">
-                                        <span class="fna-badge {badge_style}">
-                                            {badge_icon} {r["label"]}
-                                        </span>
-                                    </div>
-                                    <div style="font-size: 0.8rem; color: #64748B;">Confidence: <b style="color: #F8FAFC;">{r["confidence"]}%</b></div>
-                                </div>
-                                """,
-                                unsafe_allow_html=True
-                            )
-                            st.progress(min(r["confidence"] / 100.0, 1.0))
-                
-                st.markdown('</div>', unsafe_allow_html=True)
-                st.caption("ℹ️ This is a decision-support tool. Always corroborate news claims with reputable investigative sources.")
+                    st.markdown('</div>', unsafe_allow_html=True)
+                    st.caption("ℹ️ This is a decision-support tool. Always corroborate news claims with reputable investigative sources.")
 
         elif not check_btn:
             # Empty State

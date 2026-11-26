@@ -17,7 +17,8 @@ import matplotlib.pyplot as plt
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(os.path.join(BASE_DIR, "src"))
 
-from db import init_db, get_connection
+from db import init_db, get_connection, verify_password, get_admin_password_hash, update_admin_password
+from generate_wordclouds import generate_wordclouds
 from history import get_kpis, get_history, update_review_status, export_history, get_dataset_stats
 from ui_theme import inject_theme, render_kpi, render_badge
 from views import (
@@ -100,7 +101,8 @@ def main():
             )
             pwd = st.text_input("Password", type="password", placeholder="Enter admin password", label_visibility="collapsed")
             if st.button("Unlock Dashboard", use_container_width=True):
-                if pwd == "admin123":
+                admin_hash = get_admin_password_hash()
+                if verify_password(pwd, admin_hash):
                     st.session_state.admin_authenticated = True
                     st.rerun()
                 else:
@@ -117,20 +119,19 @@ def main():
                 </div>
                 <div>
                     <h3 style="margin: 0; font-size: 1.3rem; font-weight: 800; background: linear-gradient(135deg, #FFFFFF 0%, #CBD5E1 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">FakeNewsAI</h3>
-                    <div style="font-size: 0.78rem; color: #818CF8; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase;">Admin Console</div>
+                    <div style="font-size: 0.78rem; color: #818CF8; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase;">Admin Panel</div>
                 </div>
             </div>
             """, 
             unsafe_allow_html=True
         )
         
-        st.markdown("<p style='font-size: 0.78rem; font-weight: 700; color: #6D4AFF; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 12px;'><i class='fa-solid fa-terminal' style='margin-right: 6px;'></i>Console Menu</p>", unsafe_allow_html=True)
+        st.markdown("<p style='font-size: 0.78rem; font-weight: 700; color: #6D4AFF; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 12px;'><i class='fa-solid fa-terminal' style='margin-right: 6px;'></i>Panel Menu</p>", unsafe_allow_html=True)
         
         admin_nav_items = [
             ("Overview (Dashboard)", "Overview", ":material/dashboard:"),
             ("Prediction History", "Prediction History", ":material/history:"),
-            ("Dataset Manager", "Dataset Manager", ":material/folder_open:"),
-            ("Model Training", "Model Training", ":material/model_training:")
+            ("Settings", "Change Password", ":material/settings:")
         ]
         
         if "admin_nav_sel" not in st.session_state:
@@ -149,7 +150,7 @@ def main():
         if hasattr(st, "page_link"):
             st.page_link("app.py", label="Back to Main App", icon=":material/arrow_back:")
         else:
-            if st.button("Back to Main App", icon=":material/arrow_back:", use_container_width=True):
+            if st.button("Back to Main Page", icon=":material/arrow_back:", use_container_width=True):
                 st.switch_page("app.py")
                 
         if st.button("Logout", icon=":material/logout:", use_container_width=True):
@@ -171,8 +172,8 @@ def main():
     if admin_page == "Overview (Dashboard)":
         render_admin_header()
 
-        # Top 6 KPI Cards (Live Real-Time Values)
-        kpi_cols = st.columns(6)
+        # Top 5 KPI Cards (Live Real-Time Values)
+        kpi_cols = st.columns(5)
         with kpi_cols[0]:
             render_kpi("Total Predictions", f"{display_total:,}", "Live query records", "#3B82F6", '<i class="fa-solid fa-database" style="color: #60A5FA;"></i>')
         with kpi_cols[1]:
@@ -180,10 +181,8 @@ def main():
         with kpi_cols[2]:
             render_kpi("Fake News", f"{display_fake:,}", f"{fake_pct}% of total", "#EF4444", '<i class="fa-solid fa-triangle-exclamation" style="color: #FB7185;"></i>')
         with kpi_cols[3]:
-            render_kpi("Unverified", f"{display_unverified:,}", f"{unv_pct}% of total", "#F59E0B", '<i class="fa-solid fa-circle-question" style="color: #FBBF24;"></i>')
-        with kpi_cols[4]:
             render_kpi("Avg. Latency", f"{kpis['avg_inference']}s", "Real-time latency", "#A855F7", '<i class="fa-solid fa-bolt" style="color: #C084FC;"></i>')
-        with kpi_cols[5]:
+        with kpi_cols[4]:
             render_kpi("Best Model", f"{kpis['best_f1']}", f"{kpis['best_model']}", "#3B82F6", '<i class="fa-solid fa-award" style="color: #FBBF24;"></i>')
 
         st.markdown("<div style='height: 15px;'></div>", unsafe_allow_html=True)
@@ -250,7 +249,10 @@ def main():
             raw_model_key = selected_m.lower().replace(' ', '_')
             img_path = os.path.join(BASE_DIR, "models", f"{raw_model_key}_confusion_matrix.png")
             if os.path.exists(img_path):
-                st.image(img_path, caption=f"{selected_m} Confusion Matrix", use_container_width=True)
+                # Arranged cleanly with centered bounds
+                cm_col1, cm_col2, cm_col3 = st.columns([0.1, 0.8, 0.1])
+                with cm_col2:
+                    st.image(img_path, caption=f"{selected_m} Confusion Matrix", use_container_width=True)
             else:
                 st.info(f"Confusion matrix image for {selected_m} not found.")
 
@@ -284,7 +286,19 @@ def main():
                 """,
                 unsafe_allow_html=True
             )
-            wc_type = st.radio("Type", ["Real News", "Fake News"], horizontal=True, label_visibility="collapsed")
+            col_wc_ctrl1, col_wc_ctrl2 = st.columns([1.5, 1])
+            with col_wc_ctrl1:
+                wc_type = st.radio("Type", ["Real News", "Fake News"], horizontal=True, label_visibility="collapsed")
+            with col_wc_ctrl2:
+                if st.button("🔄 Regenerate", key="regen_wc_btn", use_container_width=True, help="Re-compute word clouds from latest raw dataset files"):
+                    with st.spinner("Regenerating word clouds from datasets..."):
+                        try:
+                            generate_wordclouds()
+                            st.success("Word clouds updated!")
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"Failed to update word clouds: {e}")
+            
             wc_file = "wordcloud_true.png" if wc_type == "Real News" else "wordcloud_fake.png"
             wc_path = os.path.join(BASE_DIR, "models", wc_file)
             if os.path.exists(wc_path):
@@ -308,9 +322,9 @@ def main():
             ax.set_facecolor("#0F172A")
             
             if display_total > 0:
-                sizes = [display_real, display_fake, display_unverified]
-                colors = ["#10B981", "#EF4444", "#F59E0B"]
-                labels = [f"Real: {real_pct}%", f"Fake: {fake_pct}%", f"Unverified: {unv_pct}%"]
+                sizes = [display_real, display_fake]
+                colors = ["#10B981", "#EF4444"]
+                labels = [f"Real: {real_pct}%", f"Fake: {fake_pct}%"]
                 
                 pie_sizes = []
                 pie_colors = []
@@ -353,7 +367,15 @@ def main():
                 unsafe_allow_html=True
             )
             
-            hist_df = get_history(limit=8)
+            # Only show unverified/pending claims in Recent Predictions / Review Queue
+            raw_hist = get_history(limit=50)
+            if not raw_hist.empty:
+                # Prioritize claims waiting for review
+                unverified_hist = raw_hist[raw_hist['status'].astype(str).str.strip().str.lower() != 'admin verified']
+                hist_df = unverified_hist.head(8) if not unverified_hist.empty else raw_hist.head(8)
+            else:
+                hist_df = raw_hist
+
             if not hist_df.empty:
                 q_rows = []
                 for i, row in hist_df.iterrows():
@@ -433,7 +455,7 @@ def main():
                 unsafe_allow_html=True
             )
             
-            if st.button("🚀 Start Retraining", use_container_width=True):
+            if st.button("Start Retraining", use_container_width=True):
                 with st.spinner("Retraining basic models via train.py..."):
                     proc = subprocess.run(
                         [sys.executable, os.path.join(BASE_DIR, "src", "train.py"), "--tier", "all"],
@@ -472,24 +494,44 @@ def main():
 
     elif "Settings" in admin_page:
         render_admin_header()
+        
+        # 1. Admin Password Management Card
         st.markdown(
             """
-            <div class="fna-card">
+            <div class="fna-card" style="margin-bottom: 20px;">
                 <div class="fna-card-header">
-                    <div class="fna-card-title"><i class="fa-solid fa-sliders" style="color: #60A5FA; margin-right: 6px;"></i>Admin Control Panel</div>
-                </div>
-                <div style="font-size: 0.9rem; line-height: 1.8; color: #CBD5E1;">
-                    <h4 style="color: #F8FAFC; margin-bottom: 8px;">System Security & Thresholds</h4>
+                    <div class="fna-card-title"><i class="fa-solid fa-key" style="color: #F59E0B; margin-right: 8px;"></i>Change Admin Password</div>
+                    <span style="font-size: 0.8rem; color: #94A3B8;">Persistent across all devices & restarts</span>
                 </div>
             """,
             unsafe_allow_html=True
         )
-        st.slider("Automatic Review Quarantine Confidence Threshold (%)", 50, 95, 70)
-        st.selectbox("Database Backup Frequency", ["Every 24 Hours", "Every 6 Hours", "Real-Time WAL Mode"])
-        st.checkbox("Require 2-Factor Authentication for Model Retraining", value=False)
-        st.checkbox("Enable Live Web Verification Cross-Referencing", value=True)
-        if st.button("Save Admin Configuration"):
-            st.success("Admin configuration saved successfully!")
+        with st.form("change_password_form", clear_on_submit=True):
+            col_p1, col_p2, col_p3 = st.columns(3)
+            with col_p1:
+                curr_pwd = st.text_input("Current Password", type="password", placeholder="Enter current password")
+            with col_p2:
+                new_pwd = st.text_input("New Password", type="password", placeholder="Enter new password (min. 4 chars)")
+            with col_p3:
+                conf_pwd = st.text_input("Confirm New Password", type="password", placeholder="Re-enter new password")
+                
+            submitted = st.form_submit_button("Update Password", type="primary")
+            if submitted:
+                stored_hash = get_admin_password_hash()
+                if not curr_pwd or not new_pwd or not conf_pwd:
+                    st.error("Please fill in all password fields.")
+                elif not verify_password(curr_pwd, stored_hash):
+                    st.error("Current password does not match.")
+                elif len(new_pwd) < 4:
+                    st.warning("New password must be at least 4 characters long.")
+                elif new_pwd != conf_pwd:
+                    st.error("New password and Confirm password do not match.")
+                else:
+                    success = update_admin_password(new_pwd)
+                    if success:
+                        st.success("Admin password successfully updated in database! It is now active on all devices.")
+                    else:
+                        st.error("Failed to update password in database.")
         st.markdown('</div>', unsafe_allow_html=True)
 
 if __name__ == "__main__":
