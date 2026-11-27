@@ -424,9 +424,19 @@ def render_prediction_history_page(is_admin: bool = False, current_user_id: int 
         unsafe_allow_html=True
     )
 
-    # Fetch History from DB (filtered for user if not admin)
-    user_filter_id = None if is_admin else current_user_id
-    hist_df = get_history(limit=500, user_id=user_filter_id)
+    # Fetch History from DB
+    # Admin sees all history; Logged-in user sees their own; Guest sees empty history (prompted to login/register)
+    if is_admin:
+        hist_df = get_history(limit=500, user_id=None)
+    elif current_user_id is not None:
+        hist_df = get_history(limit=500, user_id=current_user_id)
+    else:
+        # Unauthenticated guest user: personal history is empty until they log in / sign up
+        hist_df = pd.DataFrame(columns=[
+            "result_id", "prediction_code", "raw_text", "predicted_label",
+            "confidence", "model_name", "logged_at", "status", "inference_time",
+            "user_id", "username"
+        ])
 
     # Option 1: Guest callout banner encouraging login/registration
     if not is_admin and current_user_id is None:
