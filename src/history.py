@@ -7,9 +7,9 @@ import sys
 sys.path.append(os.path.dirname(__file__))
 from db import get_connection
 
-def log_query(raw_text: str, cleaned_text: str, model_name: str, label: str, confidence: float, inference_time: float = 0.42, status: str = "Reviewed", user_id: int = None) -> int:
+def log_query(raw_text: str, cleaned_text: str, model_name: str, label: str, confidence: float, inference_time: float = 0.42, status: str = "Reviewed") -> int:
     """
-    Logs a prediction query and its result to the database, optionally associating with a user_id.
+    Logs a prediction query and its result to the database.
     """
     conn = get_connection()
     cursor = conn.cursor()
@@ -25,10 +25,10 @@ def log_query(raw_text: str, cleaned_text: str, model_name: str, label: str, con
             cursor.execute("INSERT INTO MODEL (name, tier) VALUES (?, ?)", (model_name, 'unknown'))
             model_id = cursor.lastrowid
 
-        # 2. Insert into NEWS_QUERY with user_id
+        # 2. Insert into NEWS_QUERY
         cursor.execute(
-            "INSERT INTO NEWS_QUERY (raw_text, cleaned_text, submitted_at, user_id) VALUES (?, ?, ?, ?)",
-            (raw_text, cleaned_text, now, user_id)
+            "INSERT INTO NEWS_QUERY (raw_text, cleaned_text, submitted_at) VALUES (?, ?, ?)",
+            (raw_text, cleaned_text, now)
         )
         query_id = cursor.lastrowid
         prediction_code = f"#{query_id}"
@@ -58,20 +58,12 @@ def log_query(raw_text: str, cleaned_text: str, model_name: str, label: str, con
     finally:
         conn.close()
 
-def get_history(limit: int = 100, user_id: int = None) -> pd.DataFrame:
+def get_history(limit: int = 100) -> pd.DataFrame:
     """
-    Retrieves prediction history. If user_id is provided, filters for that user.
-    If user_id is None, returns all history (for admin).
+    Retrieves the prediction history.
     """
     conn = get_connection()
-    where_clause = ""
-    params = []
-    if user_id is not None:
-        where_clause = "WHERE nq.user_id = ?"
-        params.append(user_id)
-    params.append(limit)
-    
-    query = f'''
+    query = '''
         SELECT 
             pr.result_id,
             COALESCE(pr.prediction_code, '#' || pr.result_id) AS prediction_code,
@@ -81,20 +73,16 @@ def get_history(limit: int = 100, user_id: int = None) -> pd.DataFrame:
             m.name AS model_name,
             hl.logged_at,
             COALESCE(pr.status, 'Reviewed') AS status,
-            COALESCE(pr.inference_time, 0.42) AS inference_time,
-            nq.user_id,
-            COALESCE(u.username, 'Guest') AS username
+            COALESCE(pr.inference_time, 0.42) AS inference_time
         FROM HISTORY_LOG hl
         JOIN PREDICTION_RESULT pr ON hl.result_id = pr.result_id
         JOIN NEWS_QUERY nq ON pr.query_id = nq.query_id
         JOIN MODEL m ON pr.model_id = m.model_id
-        LEFT JOIN USER u ON nq.user_id = u.user_id
-        {where_clause}
         ORDER BY hl.logged_at DESC
         LIMIT ?
     '''
     try:
-        df = pd.read_sql_query(query, conn, params=tuple(params))
+        df = pd.read_sql_query(query, conn, params=(limit,))
         return df
     except Exception as e:
         print(f"Error retrieving history: {e}")
@@ -242,9 +230,9 @@ def update_review_status(result_id: int, status: str = "Reviewed") -> bool:
     finally:
         conn.close()
 
-def export_history(path: str, user_id: int = None) -> str:
-    """Exports prediction history to a CSV file (filtered by user_id if supplied)."""
-    df = get_history(limit=10000, user_id=user_id)
+def export_history(path: str) -> str:
+    """Exports the entire history to a CSV file."""
+    df = get_history(limit=10000)
     if df.empty:
         df = pd.DataFrame(columns=['prediction_code', 'raw_text', 'predicted_label', 'confidence', 'model_name', 'logged_at', 'status'])
     df.to_csv(path, index=False)

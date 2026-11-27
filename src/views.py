@@ -401,21 +401,18 @@ def render_model_insights_page(is_admin: bool = False):
 # -------------------------------------------------------------
 # 2. PREDICTION HISTORY VIEW (Screenshot 2)
 # -------------------------------------------------------------
-def render_prediction_history_page(is_admin: bool = False, current_user_id: int = None, current_username: str = None):
-    history_title = "Prediction History" if is_admin else f"My Prediction History ({current_username or 'Guest'})"
-    history_subtitle = "View all predictions made by users across all sessions." if is_admin else "View all predictions and verifications you have submitted in your account."
-
+def render_prediction_history_page(is_admin: bool = False):
     st.markdown(
-        f"""
+        """
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
             <div style="display: flex; align-items: center; gap: 14px;">
                 <div style="background-color: rgba(59, 130, 246, 0.15); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 12px; width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; color: #60A5FA; box-shadow: 0 0 20px rgba(59, 130, 246, 0.25);">
                     <i class="fa-solid fa-clock-rotate-left"></i>
                 </div>
                 <div>
-                    <h1 style="margin: 0; font-size: 1.85rem; font-weight: 800; color: #F8FAFC;">{history_title}</h1>
+                    <h1 style="margin: 0; font-size: 1.85rem; font-weight: 800; color: #F8FAFC;">Prediction History</h1>
                     <p style="margin: 2px 0 0 0; color: #94A3B8; font-size: 0.95rem;">
-                        {history_subtitle}
+                        View all predictions made by users, their results and model confidence scores.
                     </p>
                 </div>
             </div>
@@ -424,48 +421,17 @@ def render_prediction_history_page(is_admin: bool = False, current_user_id: int 
         unsafe_allow_html=True
     )
 
-    # Fetch History from DB
-    # Admin sees all history; Logged-in user sees their own; Guest sees empty history (prompted to login/register)
-    if is_admin:
-        hist_df = get_history(limit=500, user_id=None)
-    elif current_user_id is not None:
-        hist_df = get_history(limit=500, user_id=current_user_id)
-    else:
-        # Unauthenticated guest user: personal history is empty until they log in / sign up
-        hist_df = pd.DataFrame(columns=[
-            "result_id", "prediction_code", "raw_text", "predicted_label",
-            "confidence", "model_name", "logged_at", "status", "inference_time",
-            "user_id", "username"
-        ])
-
-    # Option 1: Guest callout banner encouraging login/registration
-    if not is_admin and current_user_id is None:
-        st.markdown(
-            """
-            <div style="background: linear-gradient(135deg, rgba(99, 102, 241, 0.15) 0%, rgba(59, 130, 246, 0.1) 100%); border: 1px solid rgba(99, 102, 241, 0.4); border-radius: 12px; padding: 14px 18px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
-                <div style="display: flex; align-items: center; gap: 12px;">
-                    <div style="font-size: 1.5rem; color: #818CF8;"><i class="fa-solid fa-lightbulb"></i></div>
-                    <div>
-                        <div style="font-weight: 700; color: #F8FAFC; font-size: 0.95rem;">Browsing as a Guest</div>
-                        <div style="color: #94A3B8; font-size: 0.85rem;">You can analyze articles freely! To save predictions to your personal history and track verifications over time, <b>Log In</b> or <b>Create a Free Account</b> in the sidebar.</div>
-                    </div>
-                </div>
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
-
     # 3 Top KPI Cards (Screenshot 2)
-    tot = len(hist_df)
-    r_count = len(hist_df[hist_df["predicted_label"].str.lower() == "real"]) if not hist_df.empty else 0
-    f_count = len(hist_df[hist_df["predicted_label"].str.lower() == "fake"]) if not hist_df.empty else 0
+    kpis = get_kpis()
+    tot = kpis["total"]
+    r_count = kpis["real"]
+    f_count = kpis["fake"]
     r_pct = round((r_count / tot) * 100, 1) if tot > 0 else 0.0
     f_pct = round((f_count / tot) * 100, 1) if tot > 0 else 0.0
 
     k1, k2, k3 = st.columns(3)
     with k1:
-        kpi_label = "Total Predictions" if is_admin else "My Predictions"
-        render_kpi(kpi_label, f"{tot:,}", "Database records", "#3B82F6", '<i class="fa-solid fa-database" style="color: #60A5FA;"></i>')
+        render_kpi("Total Predictions", f"{tot:,}", "Live database records", "#3B82F6", '<i class="fa-solid fa-database" style="color: #60A5FA;"></i>')
     with k2:
         render_kpi("Real News", f"{r_count:,}", f"{r_pct}% of total", "#10B981", '<i class="fa-solid fa-circle-check" style="color: #34D399;"></i>')
     with k3:
@@ -497,6 +463,9 @@ def render_prediction_history_page(is_admin: bool = False, current_user_id: int 
         with col_bf2:
             hide_verified = st.checkbox("🎯 Active Review Queue (Hide already-reviewed items)", value=True, help="Automatically removes items from the list as soon as you review or verify them")
 
+    # Fetch History from DB
+    hist_df = get_history(limit=250)
+
     if not hist_df.empty:
         filtered = hist_df.copy()
         if search_query:
@@ -518,8 +487,7 @@ def render_prediction_history_page(is_admin: bool = False, current_user_id: int 
         exp_col1, exp_col2 = st.columns([3, 1])
         with exp_col2:
             export_path = os.path.join(BASE_DIR, "data", "history_export.csv")
-            export_user_id = None if is_admin else current_user_id
-            export_history(export_path, user_id=export_user_id)
+            export_history(export_path)
             if os.path.exists(export_path):
                 with open(export_path, "rb") as f:
                     st.download_button("📥 Export History (CSV)", data=f, file_name="prediction_history.csv", mime="text/csv", use_container_width=True)
@@ -553,7 +521,6 @@ def render_prediction_history_page(is_admin: bool = False, current_user_id: int 
                 "Source": "News Website" if "http" not in str(row["raw_text"]) else "Online URL",
             }
             if is_admin:
-                item_data["User"] = str(row.get("username", "Guest"))
                 item_data["Status"] = str(row.get("status", "Reviewed"))
             item_data["Date & Time"] = str(row["logged_at"])[:16]
             item_data["ID"] = row["prediction_code"]

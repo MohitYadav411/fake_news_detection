@@ -43,60 +43,6 @@ def update_admin_password(new_password: str) -> bool:
     finally:
         conn.close()
 
-def register_user(username: str, password: str) -> tuple[bool, str]:
-    """Registers a new regular user in the database."""
-    username = username.strip()
-    if not username or not password:
-        return False, "Username and password cannot be empty."
-    if len(username) < 3:
-        return False, "Username must be at least 3 characters."
-    if len(password) < 4:
-        return False, "Password must be at least 4 characters."
-    if username.lower() == "admin":
-        return False, "Username 'admin' is reserved for system administrator."
-
-    conn = get_connection()
-    cursor = conn.cursor()
-    try:
-        cursor.execute("SELECT user_id FROM USER WHERE LOWER(username) = LOWER(?)", (username,))
-        if cursor.fetchone():
-            return False, "Username already exists. Please choose another username."
-        
-        cursor.execute(
-            "INSERT INTO USER (username, role, password_hash) VALUES (?, 'user', ?)",
-            (username, hash_password(password))
-        )
-        conn.commit()
-        return True, "Registration successful! You can now log in."
-    except Exception as e:
-        return False, f"Registration error: {e}"
-    finally:
-        conn.close()
-
-def authenticate_user(username: str, password: str) -> dict | None:
-    """Authenticates a user and returns user dictionary or None."""
-    username = username.strip()
-    if not username or not password:
-        return None
-
-    conn = get_connection()
-    cursor = conn.cursor()
-    try:
-        cursor.execute("SELECT user_id, username, role, password_hash FROM USER WHERE LOWER(username) = LOWER(?)", (username,))
-        row = cursor.fetchone()
-        if not row:
-            return None
-        user_id, uname, role, p_hash = row
-        if verify_password(password, p_hash):
-            return {
-                "user_id": user_id,
-                "username": uname,
-                "role": role
-            }
-        return None
-    finally:
-        conn.close()
-
 def get_connection():
     """Returns a connection to the SQLite database."""
     # Ensure data directory exists
