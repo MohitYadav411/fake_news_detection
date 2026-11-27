@@ -130,6 +130,7 @@ def main():
         
         admin_nav_items = [
             ("Overview (Dashboard)", "Overview", ":material/dashboard:"),
+            ("User Accounts", "User Database", ":material/group:"),
             ("Prediction History", "Prediction History", ":material/history:"),
             ("Settings", "Change Password", ":material/settings:")
         ]
@@ -491,6 +492,72 @@ def main():
     elif "System Logs" in admin_page:
         render_admin_header()
         render_system_logs_page()
+
+    elif "User Accounts" in admin_page:
+        render_admin_header()
+        st.markdown(
+            """
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <div style="display: flex; align-items: center; gap: 14px;">
+                    <div style="background-color: rgba(99, 102, 241, 0.15); border: 1px solid rgba(99, 102, 241, 0.3); border-radius: 12px; width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; color: #818CF8; box-shadow: 0 0 20px rgba(99, 102, 241, 0.25);">
+                        <i class="fa-solid fa-users"></i>
+                    </div>
+                    <div>
+                        <h1 style="margin: 0; font-size: 1.85rem; font-weight: 800; color: #F8FAFC;">Registered Users Database</h1>
+                        <p style="margin: 2px 0 0 0; color: #94A3B8; font-size: 0.95rem;">
+                            Live SQLite database table (<code>USER</code>) holding registered accounts and their verification activity.
+                        </p>
+                    </div>
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+        conn = get_connection()
+        query = """
+            SELECT 
+                u.user_id AS 'User ID',
+                u.username AS 'Username',
+                u.role AS 'Role',
+                COUNT(nq.query_id) AS 'Total Predictions Logged'
+            FROM USER u
+            LEFT JOIN NEWS_QUERY nq ON u.user_id = nq.user_id
+            GROUP BY u.user_id
+            ORDER BY u.user_id ASC
+        """
+        try:
+            users_df = pd.read_sql_query(query, conn)
+        finally:
+            conn.close()
+
+        # KPI Metrics
+        u_col1, u_col2, u_col3 = st.columns(3)
+        with u_col1:
+            render_kpi("Registered Users", f"{len(users_df):,}", "Active user accounts", "#6366F1", '<i class="fa-solid fa-user-group" style="color: #818CF8;"></i>')
+        with u_col2:
+            admin_count = len(users_df[users_df["Role"].str.lower() == "admin"]) if not users_df.empty else 1
+            render_kpi("Administrators", f"{admin_count:,}", "Privileged accounts", "#10B981", '<i class="fa-solid fa-user-shield" style="color: #34D399;"></i>')
+        with u_col3:
+            user_preds = users_df["Total Predictions Logged"].sum() if not users_df.empty else 0
+            render_kpi("User Verifications", f"{user_preds:,}", "Total queries by users", "#38BDF8", '<i class="fa-solid fa-chart-line" style="color: #38BDF8;"></i>')
+
+        st.markdown("<div style='height: 15px;'></div>", unsafe_allow_html=True)
+
+        st.markdown('<div class="fna-card">', unsafe_allow_html=True)
+        st.markdown("<h4 style='color: #F8FAFC; margin-top: 0;'><i class='fa-solid fa-table' style='margin-right: 8px; color: #818CF8;'></i>Database Table: <code>USER</code></h4>", unsafe_allow_html=True)
+        st.dataframe(users_df, use_container_width=True, hide_index=True)
+        
+        # Download user list
+        csv_data = users_df.to_csv(index=False).encode('utf-8')
+        st.download_button(
+            label="📥 Download Registered Users (CSV)",
+            data=csv_data,
+            file_name="registered_users.csv",
+            mime="text/csv",
+            use_container_width=True
+        )
+        st.markdown('</div>', unsafe_allow_html=True)
 
     elif "Settings" in admin_page:
         render_admin_header()
