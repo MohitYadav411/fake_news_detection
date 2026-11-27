@@ -242,9 +242,9 @@ def update_review_status(result_id: int, status: str = "Reviewed") -> bool:
     finally:
         conn.close()
 
-def export_history(path: str) -> str:
-    """Exports the entire history to a CSV file."""
-    df = get_history(limit=10000)
+def export_history(path: str, user_id: int = None) -> str:
+    """Exports prediction history to a CSV file (filtered by user_id if supplied)."""
+    df = get_history(limit=10000, user_id=user_id)
     if df.empty:
         df = pd.DataFrame(columns=['prediction_code', 'raw_text', 'predicted_label', 'confidence', 'model_name', 'logged_at', 'status'])
     df.to_csv(path, index=False)

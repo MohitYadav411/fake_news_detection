@@ -497,9 +497,6 @@ def render_prediction_history_page(is_admin: bool = False, current_user_id: int 
         with col_bf2:
             hide_verified = st.checkbox("🎯 Active Review Queue (Hide already-reviewed items)", value=True, help="Automatically removes items from the list as soon as you review or verify them")
 
-    # Fetch History from DB
-    hist_df = get_history(limit=250)
-
     if not hist_df.empty:
         filtered = hist_df.copy()
         if search_query:
@@ -521,7 +518,8 @@ def render_prediction_history_page(is_admin: bool = False, current_user_id: int 
         exp_col1, exp_col2 = st.columns([3, 1])
         with exp_col2:
             export_path = os.path.join(BASE_DIR, "data", "history_export.csv")
-            export_history(export_path)
+            export_user_id = None if is_admin else current_user_id
+            export_history(export_path, user_id=export_user_id)
             if os.path.exists(export_path):
                 with open(export_path, "rb") as f:
                     st.download_button("📥 Export History (CSV)", data=f, file_name="prediction_history.csv", mime="text/csv", use_container_width=True)
