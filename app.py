@@ -15,7 +15,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), "src"))
 from predict import predict
 from history import log_query, get_history, export_history
 from preprocessing import preprocess, is_english_text
-from db import init_db
+from db import init_db, register_user, authenticate_user
 from ui_theme import inject_theme, render_badge
 from analytics import log_system_event
 from views import (
@@ -51,11 +51,20 @@ TIER_OPTIONS = {
 }
 
 def main():
+    # Session State for User Auth
+    if "user_auth" not in st.session_state:
+        st.session_state.user_auth = {
+            "logged_in": False,
+            "user_id": None,
+            "username": "Guest",
+            "role": "guest"
+        }
+
     # Sidebar
     with st.sidebar:
         st.markdown(
             """
-            <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 28px; padding-bottom: 15px; border-bottom: 1px solid rgba(51, 65, 85, 0.6);">
+            <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 24px; padding-bottom: 15px; border-bottom: 1px solid rgba(51, 65, 85, 0.6);">
                 <div style="background: linear-gradient(135deg, rgba(99, 102, 241, 0.3) 0%, rgba(6, 182, 212, 0.2) 100%); border: 1px solid rgba(99, 102, 241, 0.5); border-radius: 12px; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; font-size: 1.35rem; color: #818CF8; box-shadow: 0 0 16px rgba(99, 102, 241, 0.35);">
                     <i class="fa-solid fa-shield-halved"></i>
                 </div>
@@ -67,6 +76,66 @@ def main():
             """, 
             unsafe_allow_html=True
         )
+
+        # User Session Profile Card in Sidebar
+        u_info = st.session_state.user_auth
+        if u_info["logged_in"]:
+            st.markdown(
+                f"""
+                <div style="background: rgba(16, 28, 51, 0.85); border: 1px solid rgba(99, 102, 241, 0.35); border-radius: 10px; padding: 12px; margin-bottom: 16px;">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <div style="background: #2563EB; width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; color: white;">
+                            {u_info['username'][0].upper()}
+                        </div>
+                        <div>
+                            <div style="font-size: 0.88rem; font-weight: 700; color: #F8FAFC;">{u_info['username']}</div>
+                            <div style="font-size: 0.75rem; color: #10B981;">● Logged In (Personal History)</div>
+                        </div>
+                    </div>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+            if st.button("Logout", key="user_logout_btn", use_container_width=True, icon=":material/logout:"):
+                st.session_state.user_auth = {
+                    "logged_in": False,
+                    "user_id": None,
+                    "username": "Guest",
+                    "role": "guest"
+                }
+                st.rerun()
+        else:
+            with st.expander("👤 User Account (Login / Register)", expanded=False):
+                auth_tab = st.radio("Mode", ["Login", "Register"], horizontal=True, label_visibility="collapsed")
+                if auth_tab == "Login":
+                    log_u = st.text_input("Username", key="sidebar_log_u")
+                    log_p = st.text_input("Password", type="password", key="sidebar_log_p")
+                    if st.button("Sign In", key="sidebar_login_btn", type="primary", use_container_width=True):
+                        auth_res = authenticate_user(log_u, log_p)
+                        if auth_res:
+                            st.session_state.user_auth = {
+                                "logged_in": True,
+                                "user_id": auth_res["user_id"],
+                                "username": auth_res["username"],
+                                "role": auth_res["role"]
+                            }
+                            st.success(f"Welcome back, {auth_res['username']}!")
+                            st.rerun()
+                        else:
+                            st.error("Invalid username or password.")
+                else:
+                    reg_u = st.text_input("New Username", key="sidebar_reg_u")
+                    reg_p = st.text_input("New Password", type="password", key="sidebar_reg_p")
+                    reg_p_confirm = st.text_input("Confirm Password", type="password", key="sidebar_reg_pc")
+                    if st.button("Create Account", key="sidebar_reg_btn", type="primary", use_container_width=True):
+                        if reg_p != reg_p_confirm:
+                            st.error("Passwords do not match.")
+                        else:
+                            ok, msg = register_user(reg_u, reg_p)
+                            if ok:
+                                st.success(msg)
+                            else:
+                                st.error(msg)
         
         st.markdown("<p style='font-size: 0.78rem; font-weight: 700; color: #6D4AFF; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 12px;'><i class='fa-solid fa-compass' style='margin-right: 6px;'></i>Navigation</p>", unsafe_allow_html=True)
         
@@ -197,7 +266,8 @@ def main():
                             })
                             # Live dynamic status: borderline confidence (< 65%) marked as Pending review
                             initial_status = "Pending" if conf < 65.0 else "Reviewed"
-                            log_query(raw_text, cleaned_text, m_name, label, conf, inference_time=max(m_dur, 0.15), status=initial_status)
+                            active_user_id = st.session_state.user_auth.get("user_id")
+                            log_query(raw_text, cleaned_text, m_name, label, conf, inference_time=max(m_dur, 0.15), status=initial_status, user_id=active_user_id)
                             log_system_event("INFO", "Predictor", f"{m_name.replace('_', ' ').title()} classified query as {label} ({conf}%)")
                     
                     inference_sec = round(time.time() - start_time, 2)
@@ -300,7 +370,9 @@ def main():
             )
 
     elif page in ["Prediction History", "History"]:
-        render_prediction_history_page(is_admin=False)
+        curr_u_id = st.session_state.user_auth.get("user_id")
+        curr_u_name = st.session_state.user_auth.get("username")
+        render_prediction_history_page(is_admin=False, current_user_id=curr_u_id, current_username=curr_u_name)
 
     elif page == "Model Comparison":
         render_model_comparison_page()

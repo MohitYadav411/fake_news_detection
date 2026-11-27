@@ -401,18 +401,21 @@ def render_model_insights_page(is_admin: bool = False):
 # -------------------------------------------------------------
 # 2. PREDICTION HISTORY VIEW (Screenshot 2)
 # -------------------------------------------------------------
-def render_prediction_history_page(is_admin: bool = False):
+def render_prediction_history_page(is_admin: bool = False, current_user_id: int = None, current_username: str = None):
+    history_title = "Prediction History" if is_admin else f"My Prediction History ({current_username or 'Guest'})"
+    history_subtitle = "View all predictions made by users across all sessions." if is_admin else "View all predictions and verifications you have submitted in your account."
+
     st.markdown(
-        """
+        f"""
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
             <div style="display: flex; align-items: center; gap: 14px;">
                 <div style="background-color: rgba(59, 130, 246, 0.15); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 12px; width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; color: #60A5FA; box-shadow: 0 0 20px rgba(59, 130, 246, 0.25);">
                     <i class="fa-solid fa-clock-rotate-left"></i>
                 </div>
                 <div>
-                    <h1 style="margin: 0; font-size: 1.85rem; font-weight: 800; color: #F8FAFC;">Prediction History</h1>
+                    <h1 style="margin: 0; font-size: 1.85rem; font-weight: 800; color: #F8FAFC;">{history_title}</h1>
                     <p style="margin: 2px 0 0 0; color: #94A3B8; font-size: 0.95rem;">
-                        View all predictions made by users, their results and model confidence scores.
+                        {history_subtitle}
                     </p>
                 </div>
             </div>
@@ -421,17 +424,21 @@ def render_prediction_history_page(is_admin: bool = False):
         unsafe_allow_html=True
     )
 
+    # Fetch History from DB (filtered for user if not admin)
+    user_filter_id = None if is_admin else current_user_id
+    hist_df = get_history(limit=500, user_id=user_filter_id)
+
     # 3 Top KPI Cards (Screenshot 2)
-    kpis = get_kpis()
-    tot = kpis["total"]
-    r_count = kpis["real"]
-    f_count = kpis["fake"]
+    tot = len(hist_df)
+    r_count = len(hist_df[hist_df["predicted_label"].str.lower() == "real"]) if not hist_df.empty else 0
+    f_count = len(hist_df[hist_df["predicted_label"].str.lower() == "fake"]) if not hist_df.empty else 0
     r_pct = round((r_count / tot) * 100, 1) if tot > 0 else 0.0
     f_pct = round((f_count / tot) * 100, 1) if tot > 0 else 0.0
 
     k1, k2, k3 = st.columns(3)
     with k1:
-        render_kpi("Total Predictions", f"{tot:,}", "Live database records", "#3B82F6", '<i class="fa-solid fa-database" style="color: #60A5FA;"></i>')
+        kpi_label = "Total Predictions" if is_admin else "My Predictions"
+        render_kpi(kpi_label, f"{tot:,}", "Database records", "#3B82F6", '<i class="fa-solid fa-database" style="color: #60A5FA;"></i>')
     with k2:
         render_kpi("Real News", f"{r_count:,}", f"{r_pct}% of total", "#10B981", '<i class="fa-solid fa-circle-check" style="color: #34D399;"></i>')
     with k3:
@@ -521,6 +528,7 @@ def render_prediction_history_page(is_admin: bool = False):
                 "Source": "News Website" if "http" not in str(row["raw_text"]) else "Online URL",
             }
             if is_admin:
+                item_data["User"] = str(row.get("username", "Guest"))
                 item_data["Status"] = str(row.get("status", "Reviewed"))
             item_data["Date & Time"] = str(row["logged_at"])[:16]
             item_data["ID"] = row["prediction_code"]
