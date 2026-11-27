@@ -139,13 +139,19 @@ def main():
         
         st.markdown("<p style='font-size: 0.78rem; font-weight: 700; color: #6D4AFF; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 12px;'><i class='fa-solid fa-compass' style='margin-right: 6px;'></i>Navigation</p>", unsafe_allow_html=True)
         
+        # Navigation items: Only show "Prediction History" if user is logged in
         nav_items = [
-            ("Home (Check News)", "Check News", ":material/search_check:"),
-            ("Prediction History", "Prediction History", ":material/history:"),
-            ("Model Comparison", "Model Comparison", ":material/balance:")
+            ("Home (Check News)", "Check News", ":material/search_check:")
         ]
+        if st.session_state.user_auth.get("logged_in"):
+            nav_items.append(("Prediction History", "My History", ":material/history:"))
+        nav_items.append(("Model Comparison", "Model Comparison", ":material/balance:"))
         
         if "app_nav" not in st.session_state:
+            st.session_state.app_nav = "Home (Check News)"
+
+        # If user logged out while on Prediction History, reset navigation to Home
+        if st.session_state.app_nav in ["Prediction History", "History"] and not st.session_state.user_auth.get("logged_in"):
             st.session_state.app_nav = "Home (Check News)"
             
         for page_key, display_label, icon_name in nav_items:
@@ -370,9 +376,13 @@ def main():
             )
 
     elif page in ["Prediction History", "History"]:
-        curr_u_id = st.session_state.user_auth.get("user_id")
-        curr_u_name = st.session_state.user_auth.get("username")
-        render_prediction_history_page(is_admin=False, current_user_id=curr_u_id, current_username=curr_u_name)
+        if not st.session_state.user_auth.get("logged_in"):
+            st.warning("Please sign in or register in the sidebar to access Prediction History.")
+            st.session_state.app_nav = "Home (Check News)"
+        else:
+            curr_u_id = st.session_state.user_auth.get("user_id")
+            curr_u_name = st.session_state.user_auth.get("username")
+            render_prediction_history_page(is_admin=False, current_user_id=curr_u_id, current_username=curr_u_name)
 
     elif page == "Model Comparison":
         render_model_comparison_page()
