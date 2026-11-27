@@ -13,6 +13,7 @@ data/synthetic/
 data/processed/*.csv
 data/processed/*.parquet
 data/*.db
+!data/app.db
 
 # Model Artifacts (too large for GitHub)
 models/*.joblib

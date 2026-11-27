@@ -128,21 +128,7 @@ def main():
             unsafe_allow_html=True
         )
 
-        # Main Input Card
-        # st.markdown('<div class="fna-card">', unsafe_allow_html=True)
-        
-        # Pill Tab
-        # st.markdown(
-        #     """
-        #     <div style="margin-bottom: 15px;">
-        #         <span style="background-color: #2563EB; color: white; padding: 6px 16px; border-radius: 8px; font-weight: 600; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 6px;">
-        #             📝 Text Input
-        #         </span>
-        #     </div>
-        #     """, 
-        #     unsafe_allow_html=True
-        # )
-
+        # Main Input Area
         raw_text = st.text_area(
             "Text Input",
             placeholder="Paste news article, headline or claim here...",
