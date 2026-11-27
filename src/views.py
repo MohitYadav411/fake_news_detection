@@ -428,6 +428,23 @@ def render_prediction_history_page(is_admin: bool = False, current_user_id: int 
     user_filter_id = None if is_admin else current_user_id
     hist_df = get_history(limit=500, user_id=user_filter_id)
 
+    # Option 1: Guest callout banner encouraging login/registration
+    if not is_admin and current_user_id is None:
+        st.markdown(
+            """
+            <div style="background: linear-gradient(135deg, rgba(99, 102, 241, 0.15) 0%, rgba(59, 130, 246, 0.1) 100%); border: 1px solid rgba(99, 102, 241, 0.4); border-radius: 12px; padding: 14px 18px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <div style="font-size: 1.5rem; color: #818CF8;"><i class="fa-solid fa-lightbulb"></i></div>
+                    <div>
+                        <div style="font-weight: 700; color: #F8FAFC; font-size: 0.95rem;">Browsing as a Guest</div>
+                        <div style="color: #94A3B8; font-size: 0.85rem;">You can analyze articles freely! To save predictions to your personal history and track verifications over time, <b>Log In</b> or <b>Create a Free Account</b> in the sidebar.</div>
+                    </div>
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
     # 3 Top KPI Cards (Screenshot 2)
     tot = len(hist_df)
     r_count = len(hist_df[hist_df["predicted_label"].str.lower() == "real"]) if not hist_df.empty else 0
