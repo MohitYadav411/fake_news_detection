@@ -45,8 +45,8 @@ TIER_OPTIONS = {
     "Intermediate": ["random_forest", "svm", "electra"],
     "Hardcore": ["lstm", "bert", "distilbert", "roberta"],
     "Ensemble (Majority Vote - All Models)": [
-        "naive_bayes", "decision_tree", "logistic_regression", "random_forest", 
-        "svm", "lstm", "bert", "distilbert", "roberta", "albert", "electra"
+        "naive_bayes", "decision_tree", "logistic_regression", "albert", "random_forest", 
+        "svm", "electra", "lstm", "bert", "distilbert", "roberta"
     ]
 }
 
